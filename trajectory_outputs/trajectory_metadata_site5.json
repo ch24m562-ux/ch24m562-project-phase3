@@ -1,0 +1,19 @@
+{
+  "site": "site5",
+  "seed": 42,
+  "episode_len": 720,
+  "rlinv_model": "runs/all_sites/site5/seed42/RLInv/site5_final_model.zip",
+  "rlinv_vecnorm": "runs/all_sites/site5/seed42/RLInv/site5_vecnormalize.pkl",
+  "trackb_model": "runs/all_sites/site5/seed42/TrackB/site5_final_model.zip",
+  "trackb_vecnorm": "runs/all_sites/site5/seed42/TrackB/site5_vecnormalize.pkl",
+  "trackb_available": true,
+  "b1_s_norm": 0.95,
+  "scenarios": [
+    "normal",
+    "delayed"
+  ],
+  "note": "B1 uses raw obs; RL policies use VecNorm-wrapped obs (matches eval.py)",
+  "site_csv": "data/processed/site5.csv",
+  "zoom_start_day_manual": null,
+  "zoom_hours": 72
+}
