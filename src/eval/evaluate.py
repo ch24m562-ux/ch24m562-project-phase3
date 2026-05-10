@@ -26,11 +26,14 @@ FIX (Bug 2): RL policies were trained with VecNormalize(norm_obs=True).
 from __future__ import annotations
 
 import os
+import re
 import time
 from typing import Callable, List, Optional, Any
 import numpy as np
 import pandas as pd
 import gymnasium as gym
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # ── VecNormObsWrapper (Bug 2 fix) ─────────────────────────────────────────────
@@ -353,12 +356,13 @@ def h1_verdict_by_lead(df_rl_inv, df_track_b, eps=0.10):
 
 if __name__ == "__main__":
     import argparse
-    from src.env.telecom_env import TelecomEnv
-    from src.env.data_loader import load_site, train_test_split
+    from env.telecom_env import TelecomEnv
+    from env.data_loader import load_site, train_test_split
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--site",         required=True)
-    parser.add_argument("--lead",         default="normal", choices=["normal", "delayed"])
+    parser.add_argument("--lead",         default="normal",
+                        choices=["fast", "normal", "delayed", "very_delayed", "multi"])
     parser.add_argument("--model_path",   default="")
     parser.add_argument("--vecnorm_path", default="",
                         help="path to vecnormalize.pkl (auto-detected if omitted)")
@@ -379,7 +383,7 @@ if __name__ == "__main__":
     parser.add_argument("--policy_label",    type=str, default="",
                         help="Human-readable policy name written to CSV. E.g. RLInv, TrackB, A7, Stress")
     parser.add_argument("--train_scenario",  type=str, default="normal",
-                        choices=["normal", "delayed"],
+                        choices=["fast", "normal", "delayed", "very_delayed", "multi"],
                         help="Lead scenario the model was TRAINED on (not evaluated on).")
     parser.add_argument("--experiment_tag",  type=str, default="main",
                         help="Tag for this experiment run. E.g. main, ablation_a7, stress.")
@@ -390,15 +394,22 @@ if __name__ == "__main__":
     # ── Auto-detect vecnorm_path ──────────────────────────────────────────────
     vecnorm_path = args.vecnorm_path
     if not vecnorm_path and args.policy_type == "rl" and args.model_path:
+        # Strip known model filename suffixes to get the base path
         base = (args.model_path
                 .replace("_final_model.zip", "").replace("_final_model", "")
                 .replace("_best/best_model.zip", "").replace("_best/best_model", ""))
-        candidate = base + "_vecnormalize.pkl"
-        if os.path.exists(candidate):
-            vecnorm_path = candidate
-            print(f"[INFO] Auto-detected vecnorm_path: {vecnorm_path}")
-        else:
-            print(f"[WARN] Could not auto-detect vecnorm_path. Tried: {candidate}")
+        # Phase 3 pattern: site5_s42_final.zip → site5_s42
+        base = re.sub(r"_final\.zip$", "", base)
+        base = re.sub(r"_final$",      "", base)
+        # Try new Phase 3 suffix first (_vecnorm.pkl), then Phase 2 suffix (_vecnormalize.pkl)
+        for suffix in ["_vecnorm.pkl", "_vecnormalize.pkl"]:
+            candidate = base + suffix
+            if os.path.exists(candidate):
+                vecnorm_path = candidate
+                print(f"[INFO] Auto-detected vecnorm_path: {vecnorm_path}")
+                break
+        if not vecnorm_path:
+            print(f"[WARN] Could not auto-detect vecnorm_path for: {args.model_path}")
 
     # ── Load policy ───────────────────────────────────────────────────────────
     if args.policy_type == "rl":
@@ -411,11 +422,11 @@ if __name__ == "__main__":
             from stable_baselines3 import PPO
             policy = PPO.load(args.model_path)
     elif args.policy_type == "b0":
-        from src.baselines.rule_based import RuleBasedPolicy
+        from baselines.rule_based import RuleBasedPolicy
         policy = RuleBasedPolicy()
         vecnorm_path = ""   # baselines not trained with VecNormalize
     elif args.policy_type == "b1":
-        from src.baselines.s_S_policy import B1Policy, SSPolicy
+        from baselines.s_S_policy import B1Policy, SSPolicy
         policy = B1Policy(ss_policy=SSPolicy())
         vecnorm_path = ""   # baselines not trained with VecNormalize
 
@@ -425,7 +436,7 @@ if __name__ == "__main__":
 
         if args.env_type == "track_b":
             # FIX (Bug 1): episode_len=720 so Track B matches Track A horizon
-            from src.train.train_track_b import make_track_b_eval_env
+            from train.train_track_b import make_track_b_eval_env
             base_env = make_track_b_eval_env(
                 site_csv, seed=seed, lead_scenario=lead,
                 episode_len=args.episode_len,
@@ -437,8 +448,8 @@ if __name__ == "__main__":
             # make_a6_env builds A6Env (TelecomEnv subclass) + calibrates SSPolicy
             # from site_params. VecNormObsWrapper applied below — same pkl as RLInv
             # (both use 9D obs from TelecomEnv; A6Env does not change obs space).
-            from src.env.data_loader import load_site, train_test_split
-            from src.env.a6_env import make_a6_env
+            from env.data_loader import load_site, train_test_split
+            from env.a6_env import make_a6_env
             df, params = load_site(site_csv)
             _df_train, df_test = train_test_split(df)
             base_env = make_a6_env(
@@ -452,7 +463,7 @@ if __name__ == "__main__":
                 init_inv_frac_high=args.init_diesel_high,
             )
         else:
-            from src.env.data_loader import load_site, train_test_split
+            from env.data_loader import load_site, train_test_split
             df, params = load_site(site_csv)
             _df_train, df_test = train_test_split(df)
             base_env = TelecomEnv(
@@ -463,7 +474,7 @@ if __name__ == "__main__":
                 init_inv_frac_high=args.init_diesel_high,
             )
             if args.env_type == "a5":
-                from src.env.obs_wrappers import NoInvObsWrapper
+                from env.obs_wrappers import NoInvObsWrapper
                 base_env = NoInvObsWrapper(base_env)
 
         # FIX (Bug 2): RL policies only — wrap with VecNormObsWrapper.
@@ -507,4 +518,3 @@ if __name__ == "__main__":
         os.makedirs(os.path.dirname(args.out_csv) or ".", exist_ok=True)
         df.to_csv(args.out_csv, index=False)
         print(f"Saved: {args.out_csv}")
-
