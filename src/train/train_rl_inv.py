@@ -31,8 +31,8 @@ from stable_baselines3.common.monitor import Monitor
 
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
-
 import mlflow
+from callbacks import DetailedEvalCallback
 
 # ── All hyperparameters from hparams.yaml ─────────────────────────────────────
 from config_loader import ppo_cfg, policy_cfg, train_cfg, env_cfg, registry_cfg
@@ -45,29 +45,6 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
 
 
 # ── VecNormalize sync callback (UNCHANGED) ────────────────────────────────────
-class SyncNormEvalCallback(EvalCallback):
-    """EvalCallback that syncs VecNormalize stats from train env to eval env."""
-
-    def _sync_vecnormalize(self):
-        train_vn = self.model.get_vec_normalize_env()
-        eval_vn = self.eval_env
-        if train_vn is None:
-            return
-        if not isinstance(train_vn, VecNormalize):
-            return
-        if not isinstance(eval_vn, VecNormalize):
-            return
-        eval_vn.obs_rms = train_vn.obs_rms
-        eval_vn.ret_rms = train_vn.ret_rms
-        eval_vn.training = False
-        eval_vn.norm_reward = False
-
-    def _on_step(self) -> bool:
-        if self.eval_freq > 0 and (self.n_calls % self.eval_freq == 0):
-            self._sync_vecnormalize()
-        return super()._on_step()
-
-
 def mask_fn(env) -> np.ndarray:
     return env.unwrapped.get_action_mask()
 
@@ -80,8 +57,8 @@ def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str):
         data = df_test if eval_mode else df_train
 
         ep_len   = env_cfg["eval_episode_len"] if eval_mode else env_cfg["train_episode_len"]
-        inv_low  = env_cfg["init_inv_frac_eval_low"]  if eval_mode else env_cfg["init_inv_frac_train"]
-        inv_high = env_cfg["init_inv_frac_eval_high"] if eval_mode else env_cfg["init_inv_frac_train"]
+        inv_low  = env_cfg["init_inv_frac_eval_low"]  if eval_mode else env_cfg["init_inv_frac_train_low"]
+        inv_high = env_cfg["init_inv_frac_eval_high"] if eval_mode else env_cfg["init_inv_frac_train_high"]
 
         env = TelecomEnv(
             site_data=data,
@@ -220,14 +197,16 @@ def main():
                 seed           = args.seed,
             )
 
-            eval_cb = SyncNormEvalCallback(
+            eval_cb = DetailedEvalCallback(
                 eval_env,
-                best_model_save_path = os.path.join(args.logdir, f"{site}_best"),
-                log_path             = os.path.join(args.logdir, f"{site}_eval"),
-                eval_freq            = train_cfg["eval_freq"],
-                n_eval_episodes      = train_cfg["n_eval_episodes"],
-                deterministic        = True,
-                render               = False,
+                site=site,
+                seed=args.seed,
+                best_model_save_path=os.path.join(args.logdir, f"{site}_best"),
+                log_path=os.path.join(args.logdir, f"{site}_eval"),
+                eval_freq=train_cfg["eval_freq"],
+                n_eval_episodes=train_cfg["n_eval_episodes"],
+                deterministic=True,
+                render=False,
             )
 
             # ── Train ─────────────────────────────────────────────────────────
