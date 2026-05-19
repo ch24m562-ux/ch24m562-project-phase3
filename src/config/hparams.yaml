@@ -128,7 +128,7 @@ training:
   total_timesteps_multi: 500000  # multi-scenario harder — 25% more steps
   n_envs: 4                      # SubprocVecEnv workers (reduced from 8 due to OS limits)
   eval_freq: 10000               # evaluation callback fires every 10K steps
-  n_eval_episodes: 3             # episodes per callback evaluation
+  n_eval_episodes: 5             # episodes per callback evaluation - was 3 — more reliable callback signal
   seeds: [42, 123, 777]          # Phase 2 seeds (keep for reproducibility)
 
   # Phase 3 extended seeds — all RL experiments
