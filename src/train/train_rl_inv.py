@@ -50,7 +50,9 @@ def mask_fn(env) -> np.ndarray:
 
 
 # ── make_env — same structure as original ────────────────────────────────────
-def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str):
+def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str,
+             tank_scale: float = 1.0, use_time_encoding: bool = True,
+             lead_distribution: str = "geometric"):
     def _init():
         df, params = load_site(site_csv)
         df_train, df_test = train_test_split(df)
@@ -69,6 +71,9 @@ def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str):
             seed=seed,
             init_inv_frac_low=inv_low,
             init_inv_frac_high=inv_high,
+            tank_scale=tank_scale,
+            use_time_encoding=use_time_encoding,
+            lead_distribution=lead_distribution,
         )
         env = Monitor(env)
         env = ActionMasker(env, mask_fn)
@@ -103,16 +108,27 @@ def _log_to_registry(record: dict):
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--site",      type=str,  default="site1")
-    ap.add_argument("--all_sites", action="store_true",
+    ap.add_argument("--site",       type=str,   default="site1")
+    ap.add_argument("--all_sites",  action="store_true",
                     help="train all 10 sites sequentially")
-    ap.add_argument("--lead",      type=str,  default="normal",
+    ap.add_argument("--lead",       type=str,   default="normal",
                     choices=["fast", "normal", "delayed", "very_delayed", "multi"])
-    ap.add_argument("--timesteps", type=int,  default=train_cfg["total_timesteps"])
-    ap.add_argument("--seed",      type=int,  default=42)
-    ap.add_argument("--logdir",    type=str,  default="runs/rlinv")
-    ap.add_argument("--tag",       type=str,  default="phase3",
+    ap.add_argument("--timesteps",  type=int,   default=train_cfg["total_timesteps"])
+    ap.add_argument("--seed",       type=int,   default=42)
+    ap.add_argument("--logdir",     type=str,   default="runs/rlinv")
+    ap.add_argument("--tag",        type=str,   default="phase3",
                     help="Experiment tag for MLflow and registry CSV")
+    # ── Phase 3 additions ─────────────────────────────────────────────────────
+    ap.add_argument("--gamma",      type=float, default=None,
+                    help="Override PPO discount factor (default: from hparams.yaml). "
+                         "Use for gamma sensitivity: 0.95, 0.99, 0.995")
+    ap.add_argument("--tank_scale", type=float, default=1.0,
+                    help="Tank capacity multiplier. 1.0=72h (base), 1.33=96h, 2.0=144h")
+    ap.add_argument("--no_time_enc", action="store_true",
+                    help="Disable time encoding ablation — zeros sin_h/cos_h in obs")
+    ap.add_argument("--lead_dist",  type=str,   default="geometric",
+                    choices=["geometric", "lognormal"],
+                    help="Lead time distribution. lognormal samples at order placement.")
     args = ap.parse_args()
 
     os.makedirs(args.logdir, exist_ok=True)
@@ -134,19 +150,23 @@ def main():
         run_name = f"{site}_lead{args.lead}_s{args.seed}"
         with mlflow.start_run(run_name=run_name):
 
-            # Log all hyperparams from hparams.yaml
+            # Log all hyperparams from hparams.yaml + CLI overrides
+            gamma_val = args.gamma if args.gamma is not None else ppo_cfg["gamma"]
             mlflow.log_params({
                 "site":           site,
                 "seed":           args.seed,
                 "lead_scenario":  args.lead,
                 "tag":            args.tag,
-                "gamma":          ppo_cfg["gamma"],
+                "gamma":          gamma_val,
                 "n_steps":        ppo_cfg["n_steps"],
                 "batch_size":     ppo_cfg["batch_size"],
                 "learning_rate":  ppo_cfg["learning_rate"],
                 "n_envs":         train_cfg["n_envs"],
                 "total_timesteps": args.timesteps,
                 "net_arch":       str(policy_cfg["net_arch"]),
+                "tank_scale":     args.tank_scale,
+                "use_time_enc":   not args.no_time_enc,
+                "lead_dist":      args.lead_dist,
                 "git_commit":     _get_git_commit(),
             })
 
@@ -154,7 +174,11 @@ def main():
             n_envs = train_cfg["n_envs"]
 
             vec_env = SubprocVecEnv([
-                make_env(site_csv, args.seed + i, eval_mode=False, lead_scenario=args.lead)
+                make_env(site_csv, args.seed + i, eval_mode=False,
+                         lead_scenario=args.lead,
+                         tank_scale=args.tank_scale,
+                         use_time_encoding=not args.no_time_enc,
+                         lead_distribution=args.lead_dist)
                 for i in range(n_envs)
             ])
             vec_env = VecNormalize(
@@ -163,7 +187,11 @@ def main():
             )
 
             eval_env = DummyVecEnv([
-                make_env(site_csv, args.seed + 10_000, eval_mode=True, lead_scenario=args.lead)
+                make_env(site_csv, args.seed + 10_000, eval_mode=True,
+                         lead_scenario=args.lead,
+                         tank_scale=args.tank_scale,
+                         use_time_encoding=not args.no_time_enc,
+                         lead_distribution=args.lead_dist)
             ])
             eval_env = VecNormalize(
                 eval_env, norm_obs=True, norm_reward=False,
@@ -185,7 +213,7 @@ def main():
                 learning_rate  = lr_schedule,
                 n_steps        = ppo_cfg["n_steps"],
                 batch_size     = ppo_cfg["batch_size"],
-                gamma          = ppo_cfg["gamma"],
+                gamma          = gamma_val,
                 gae_lambda     = ppo_cfg["gae_lambda"],
                 clip_range     = ppo_cfg["clip_range"],
                 ent_coef       = ppo_cfg["ent_coef"],
@@ -259,6 +287,9 @@ def main():
                 "violations":      "",
                 "timestamp":       datetime.now().isoformat(),
                 "git_commit":      _get_git_commit(),
+                "tank_scale":      args.tank_scale,
+                "lead_dist":       args.lead_dist,
+                "use_time_enc":    not args.no_time_enc,
             })
 
 

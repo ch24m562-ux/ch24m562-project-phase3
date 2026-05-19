@@ -20,12 +20,10 @@ def _find_hparams() -> Path:
     """Walk up from this file's location until hparams.yaml is found."""
     current = Path(__file__).resolve().parent
     for _ in range(5):  # search up to 5 levels
-        candidate = current / "configs" / "hparams.yaml"
-        if candidate.exists():
-            return candidate
-        candidate = current / "hparams.yaml"
-        if candidate.exists():
-            return candidate
+        for subdir in ("configs", "config", ""):
+            candidate = (current / subdir / "hparams.yaml") if subdir else (current / "hparams.yaml")
+            if candidate.exists():
+                return candidate
         current = current.parent
     raise FileNotFoundError(
         "hparams.yaml not found. Place it in configs/ at the repo root."
@@ -42,15 +40,18 @@ def _load() -> dict:
 cfg: dict = _load()
 
 # Convenient sub-sections — import these directly
-env_cfg    = cfg["env"]
-lead_cfg   = cfg["lead_time"]
-reward_cfg = cfg["reward"]
-ppo_cfg    = cfg["ppo"]
-policy_cfg = cfg["policy"]
-train_cfg  = cfg["training"]
-eval_cfg   = cfg["evaluation"]
-sS_cfg     = cfg["sS_policy"]
-registry_cfg = cfg["registry"]
+env_cfg          = cfg["env"]
+lead_cfg         = cfg["lead_time"]
+reward_cfg       = cfg["reward"]
+ppo_cfg          = cfg["ppo"]
+policy_cfg       = cfg["policy"]
+train_cfg        = cfg["training"]
+eval_cfg         = cfg["evaluation"]
+sS_cfg           = cfg["sS_policy"]
+registry_cfg     = cfg["registry"]
+lognormal_cfg    = cfg.get("lognormal",        {"sigma": 0.5, "sigma_heavy": 0.8})
+tank_sens_cfg    = cfg.get("tank_sensitivity", {"scales": [0.67, 1.0, 1.33, 2.0],
+                                                 "labels": ["48h","72h_base","96h","144h"]})
 
 
 def get_lead_p(scenario: str) -> float:
