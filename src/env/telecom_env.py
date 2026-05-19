@@ -687,6 +687,8 @@ class TelecomEnv(gym.Env):
             "steps":          int(self._step_num),
             "EENS_kWh":       float(np.sum([i["unmet_kwh"]   for i in log])),
             "outage_hours":   int(np.sum([i["unmet_kwh"] > 0 for i in log])),
+            "uptime_pct":     round(100.0 * (1.0 - np.sum([i["unmet_kwh"] > 0 for i in log])
+                                             / max(int(self._step_num), 1)), 4),
             "diesel_kWh":     float(np.sum([i["p_dg_kwh"]    for i in log])),
             "grid_kWh":       float(np.sum([i["p_grid_kwh"]  for i in log])),
             "stockout_events":int(np.sum([i.get("stockout_flag", 0) for i in log])),
