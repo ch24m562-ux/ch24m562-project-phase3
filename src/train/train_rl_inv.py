@@ -53,7 +53,8 @@ def mask_fn(env) -> np.ndarray:
 def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str,
              tank_scale: float = 1.0, use_time_encoding: bool = True,
              lead_distribution: str = "geometric",
-             use_stochastic_grid: bool = False):
+             use_stochastic_grid: bool = False,
+             use_eta_obs: bool = False):
     def _init():
         df, params = load_site(site_csv)
         df_train, df_test = train_test_split(df)
@@ -76,6 +77,7 @@ def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str,
             use_time_encoding=use_time_encoding,
             lead_distribution=lead_distribution,
             use_stochastic_grid=use_stochastic_grid,
+            use_eta_obs=use_eta_obs,
         )
         env = Monitor(env)
         env = ActionMasker(env, mask_fn)
@@ -132,8 +134,11 @@ def main():
                     choices=["geometric", "lognormal"],
                     help="Lead time distribution. lognormal samples at order placement.")
     ap.add_argument("--stochastic_grid", action="store_true",
-                    help="Use 2-state Markov chain for grid outage (fitted from site data). "
-                         "Prevents agent memorising exact outage timing.")
+                    help="Use 2-state Markov chain for grid outage (fitted from site data).")
+    ap.add_argument("--use_eta_obs", action="store_true",
+                    help="ETA-aware EXTENSION only: agent sees delivery_remaining_n. "
+                         "Default False for all main experiments. "
+                         "Only use with --lead_dist lognormal --tag lognormal_eta.")
     args = ap.parse_args()
 
     os.makedirs(args.logdir, exist_ok=True)
@@ -169,11 +174,12 @@ def main():
                 "n_envs":         train_cfg["n_envs"],
                 "total_timesteps": args.timesteps,
                 "net_arch":       str(policy_cfg["net_arch"]),
-                "tank_scale":     args.tank_scale,
-                "use_time_enc":   not args.no_time_enc,
-                "lead_dist":      args.lead_dist,
+                "tank_scale":      args.tank_scale,
+                "use_time_enc":    not args.no_time_enc,
+                "lead_dist":       args.lead_dist,
                 "stochastic_grid": args.stochastic_grid,
-                "git_commit":     _get_git_commit(),
+                "use_eta_obs":     args.use_eta_obs,
+                "git_commit":      _get_git_commit(),
             })
 
             # ── Training setup (UNCHANGED logic) ─────────────────────────────
@@ -185,7 +191,8 @@ def main():
                          tank_scale=args.tank_scale,
                          use_time_encoding=not args.no_time_enc,
                          lead_distribution=args.lead_dist,
-                         use_stochastic_grid=args.stochastic_grid)
+                         use_stochastic_grid=args.stochastic_grid,
+                         use_eta_obs=args.use_eta_obs)
                 for i in range(n_envs)
             ])
             vec_env = VecNormalize(
@@ -199,7 +206,8 @@ def main():
                          tank_scale=args.tank_scale,
                          use_time_encoding=not args.no_time_enc,
                          lead_distribution=args.lead_dist,
-                         use_stochastic_grid=args.stochastic_grid)
+                         use_stochastic_grid=args.stochastic_grid,
+                         use_eta_obs=args.use_eta_obs)
             ])
             eval_env = VecNormalize(
                 eval_env, norm_obs=True, norm_reward=False,

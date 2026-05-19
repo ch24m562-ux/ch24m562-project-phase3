@@ -30,56 +30,40 @@ import sys
 import argparse
 from typing import Callable
 
+import mlflow
+import csv
+import subprocess
+from datetime import datetime
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from config_loader import ppo_cfg, policy_cfg, train_cfg, env_cfg, registry_cfg
 from env.data_loader import load_site, train_test_split
 from env.telecom_env import TelecomEnv
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecNormalize
-from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.monitor import Monitor
+from callbacks import DetailedEvalCallback
 
 
 # ── Hyperparameters — identical to train_rl_inv.py for fair comparison ───────
 
-DEFAULT_TIMESTEPS = 200_000   # less than full 576K — ablation only needs site5
-N_ENVS = 8
+# timesteps from hparams (Phase 3: use full 400K for consistency)   # less than full 576K — ablation only needs site5
+# n_envs from hparams (was 8, actual was 4 due to OS limits)
 
-TRAIN_EP_LEN = 720
-EVAL_EP_LEN  = 720
+TRAIN_EP_LEN = env_cfg["train_episode_len"]
+EVAL_EP_LEN  = env_cfg["eval_episode_len"]
 
-POLICY_NET = [256, 256]
-LR_START   = 3e-4
+# policy_net from hparams
+# lr from hparams
 
 
 def linear_schedule(initial_value: float) -> Callable[[float], float]:
     def f(progress_remaining: float) -> float:
         return progress_remaining * initial_value
     return f
-
-
-# ── VecNormalize sync callback (same as train_rl_inv.py) ─────────────────────
-
-class SyncNormEvalCallback(EvalCallback):
-    def _sync_vecnormalize(self):
-        train_vn = self.model.get_vec_normalize_env()
-        eval_vn  = self.eval_env
-        if not isinstance(train_vn, VecNormalize):
-            return
-        if not isinstance(eval_vn, VecNormalize):
-            return
-        eval_vn.obs_rms   = train_vn.obs_rms
-        eval_vn.ret_rms   = train_vn.ret_rms
-        eval_vn.training  = False
-        eval_vn.norm_reward = False
-
-    def _on_step(self) -> bool:
-        if self.eval_freq > 0 and (self.n_calls % self.eval_freq == 0):
-            self._sync_vecnormalize()
-        return super()._on_step()
 
 
 # ── Env factory — NO ActionMasker wrapper ────────────────────────────────────
@@ -112,12 +96,21 @@ def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str,
     return _init
 
 
+def _get_git_commit() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except Exception:
+        return "unknown"
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--site",       type=str,   default="site5")
     ap.add_argument("--lead",       type=str,   default="normal",
-                    choices=["fast", "normal", "delayed"])
-    ap.add_argument("--timesteps",  type=int,   default=DEFAULT_TIMESTEPS)
+                    choices=["fast", "normal", "delayed", "very_delayed", "multi"])
+    ap.add_argument("--timesteps",  type=int,   default=train_cfg["total_timesteps"])
+    ap.add_argument("--tag", type=str, default="phase3")
     ap.add_argument("--seed",       type=int,   default=42)
     ap.add_argument("--logdir",     type=str,   default="runs/ablation_a7")
     ap.add_argument("--init_diesel_low",  type=float, default=0.6)
@@ -125,6 +118,8 @@ def main():
     args = ap.parse_args()
 
     os.makedirs(args.logdir, exist_ok=True)
+    mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    mlflow.set_experiment(getattr(args, "tag", "phase3"))
     site = args.site
     site_csv = f"data/processed/{site}.csv"
 
@@ -137,68 +132,87 @@ def main():
                  lead_scenario=args.lead,
                  init_inv_frac_low=args.init_diesel_low,
                  init_inv_frac_high=args.init_diesel_high)
-        for i in range(N_ENVS)
+        for i in range(train_cfg["n_envs"])
     ])
-    vec_env = VecNormalize(vec_env, norm_obs=True, norm_reward=False, clip_obs=10.0)
+    vec_env = VecNormalize(vec_env, norm_obs=True, norm_reward=False, clip_obs=policy_cfg["obs_clip"])
 
     # ── Eval env ─────────────────────────────────────────────────────────────
     eval_env = DummyVecEnv([
         make_env(site_csv, args.seed + 10_000, eval_mode=True,
-                 lead_scenario=args.lead)
+                 lead_scenario=args.lead,
+                 init_inv_frac_low=args.init_diesel_low,
+                 init_inv_frac_high=args.init_diesel_high)
     ])
-    eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, clip_obs=10.0)
+    eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, clip_obs=policy_cfg["obs_clip"])
     eval_env.training = False
 
     # ── Model — standard PPO, no masking ─────────────────────────────────────
     model = PPO(
         "MlpPolicy",
         vec_env,
-        learning_rate=linear_schedule(LR_START),
-        n_steps=2048,
-        batch_size=256,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_range=0.2,
-        ent_coef=0.01,
-        vf_coef=0.5,
-        max_grad_norm=0.5,
-        policy_kwargs=dict(net_arch=POLICY_NET),
+        learning_rate=linear_schedule(ppo_cfg["learning_rate"]),
+        n_steps=ppo_cfg["n_steps"],
+        batch_size=ppo_cfg["batch_size"],
+        gamma=ppo_cfg["gamma"],
+        gae_lambda=ppo_cfg["gae_lambda"],
+        clip_range=ppo_cfg["clip_range"],
+        ent_coef=ppo_cfg["ent_coef"],
+        vf_coef=ppo_cfg["vf_coef"],
+        max_grad_norm=ppo_cfg["max_grad_norm"],
+        policy_kwargs=dict(net_arch=policy_cfg["net_arch"]),
         verbose=1,
         tensorboard_log=args.logdir,
         seed=args.seed,
     )
 
-    eval_cb = SyncNormEvalCallback(
+    eval_cb = DetailedEvalCallback(
         eval_env,
+        site=site,
+        seed=args.seed,
         best_model_save_path=os.path.join(args.logdir, f"{site}_best"),
         log_path=os.path.join(args.logdir, f"{site}_eval"),
-        eval_freq=10_000,
-        n_eval_episodes=3,
+        eval_freq=train_cfg["eval_freq"],
+        n_eval_episodes=train_cfg["n_eval_episodes"],
         deterministic=True,
         render=False,
     )
 
     model.learn(total_timesteps=args.timesteps, callback=eval_cb)
 
+    # ── MLflow logging ────────────────────────────────────────────────────────
+    best_reward = eval_cb.best_mean_reward
+    with mlflow.start_run(run_name=f"{site}_A7_s{args.seed}"):
+        mlflow.log_params({
+            "site":            site,
+            "seed":            args.seed,
+            "policy":          "A7",
+            "lead_scenario":   args.lead,
+            "gamma":           ppo_cfg["gamma"],
+            "n_envs":          train_cfg["n_envs"],
+            "total_timesteps": args.timesteps,
+            "git_commit":      _get_git_commit(),
+        })
+        mlflow.log_metrics({
+            "best_eval_reward": float(best_reward) if np.isfinite(best_reward) else -9999.0,
+        })
+
     # ── Save ─────────────────────────────────────────────────────────────────
-    model_path = os.path.join(args.logdir, f"{site}_final_model.zip")
-    vn_path    = os.path.join(args.logdir, f"{site}_vecnormalize.pkl")
+    model_path = os.path.join(args.logdir, f"{site}_s{args.seed}_final.zip")
+    vn_path    = os.path.join(args.logdir, f"{site}_s{args.seed}_vecnorm.pkl")
 
     model.save(model_path)
     vec_env.save(vn_path)
-
     vec_env.close()
     eval_env.close()
 
     print(f"[A7] Saved: {model_path}")
     print(f"[A7] Saved VecNormalize: {vn_path}")
-    print()
-    print("Next — evaluate with:")
-    print(f"  python -m src.eval.evaluate --site {site} --lead {args.lead} "
+    print("\nNext — evaluate with:")
+    print(f"  python src/eval/evaluate.py --site {site} --lead {args.lead} "
           f"--policy_type rl --algo ppo --env_type track_a "
-          f"--model_path {model_path.replace('.zip','')} "
-          f"--episodes 5 --seed 42 "
-          f"--out_csv results/eval/ablation_a7_{site}_{args.lead}.csv")
+          f"--model_path {model_path} "
+          f"--episodes 5 --seed {args.seed} "
+          f"--out_csv results/ablation_a7_{site}_{args.lead}.csv")
 
 
 if __name__ == "__main__":

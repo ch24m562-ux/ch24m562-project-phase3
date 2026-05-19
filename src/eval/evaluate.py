@@ -362,7 +362,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--site",         required=True)
     parser.add_argument("--lead",         default="normal",
-                        choices=["fast", "normal", "delayed", "very_delayed", "multi"])
+                        choices=["no_delay", "fast", "normal", "delayed",
+                                 "monsoon", "very_delayed", "extreme", "multi"])
     parser.add_argument("--model_path",   default="")
     parser.add_argument("--vecnorm_path", default="",
                         help="path to vecnormalize.pkl (auto-detected if omitted)")
@@ -371,24 +372,33 @@ if __name__ == "__main__":
     parser.add_argument("--out_csv",      default="")
     parser.add_argument("--policy_type",  default="rl", choices=["rl", "b0", "b1"])
     parser.add_argument("--algo",         default="maskable", choices=["maskable", "ppo"])
-    parser.add_argument("--env_type", default="track_a", choices=["track_a", "track_b", "a5", "a6"])
-    parser.add_argument("--episode_len",    type=int,   default=720)
-    parser.add_argument("--init_diesel_low",  type=float, default=0.6,
-                        help="lower bound for initial inventory fraction (0-1). Default 0.6.")
-    parser.add_argument("--init_diesel_high", type=float, default=0.6,
-                        help="upper bound for initial inventory fraction (0-1). Default 0.6.")
+    parser.add_argument("--env_type", default="track_a",
+                        choices=["track_a", "track_b", "a5", "a6"])
+    parser.add_argument("--episode_len",  type=int, default=360,
+                        help="Evaluation episode length (default 360 = 15-day test split)")
+    parser.add_argument("--init_diesel_low",  type=float, default=0.3)
+    parser.add_argument("--init_diesel_high", type=float, default=0.9)
     parser.add_argument("--trace_out", type=str, default="",
-                        help="Save per-step trace for episode 0 to this .npz path (for Fig 6).")
+                        help="Save per-step trace for episode 0 to this .npz path.")
+    # ── Phase 3 env args (pass-through to TelecomEnv) ────────────────────────
+    parser.add_argument("--lead_dist",    type=str, default="geometric",
+                        choices=["geometric", "lognormal"],
+                        help="Lead time distribution")
+    parser.add_argument("--tank_scale",   type=float, default=1.0,
+                        help="Tank capacity multiplier (1.0=72h base)")
+    parser.add_argument("--stochastic_grid", action="store_true",
+                        help="Use Markov chain grid outage instead of dataset")
+    parser.add_argument("--no_time_enc",  action="store_true",
+                        help="Disable time encoding ablation")
+    parser.add_argument("--use_eta_obs",  action="store_true",
+                        help="ETA-aware extension: agent sees delivery_remaining_n")
     # ── Metadata columns written into every CSV row ───────────────────────────
-    parser.add_argument("--policy_label",    type=str, default="",
-                        help="Human-readable policy name written to CSV. E.g. RLInv, TrackB, A7, Stress")
+    parser.add_argument("--policy_label",    type=str, default="")
     parser.add_argument("--train_scenario",  type=str, default="normal",
-                        choices=["fast", "normal", "delayed", "very_delayed", "multi"],
-                        help="Lead scenario the model was TRAINED on (not evaluated on).")
-    parser.add_argument("--experiment_tag",  type=str, default="main",
-                        help="Tag for this experiment run. E.g. main, ablation_a7, stress.")
-    parser.add_argument("--train_steps",     type=int, default=0,
-                        help="Timesteps used to train this model (for reproducibility record).")
+                        choices=["no_delay", "fast", "normal", "delayed",
+                                 "monsoon", "very_delayed", "extreme", "multi"])
+    parser.add_argument("--experiment_tag",  type=str, default="main")
+    parser.add_argument("--train_steps",     type=int, default=0)
     args = parser.parse_args()
 
     # ── Auto-detect vecnorm_path ──────────────────────────────────────────────
@@ -472,6 +482,11 @@ if __name__ == "__main__":
                 eval_mode=True, lead_scenario=lead, seed=seed,
                 init_inv_frac_low=args.init_diesel_low,
                 init_inv_frac_high=args.init_diesel_high,
+                tank_scale=args.tank_scale,
+                use_time_encoding=not args.no_time_enc,
+                lead_distribution=args.lead_dist,
+                use_stochastic_grid=args.stochastic_grid,
+                use_eta_obs=args.use_eta_obs,
             )
             if args.env_type == "a5":
                 from env.obs_wrappers import NoInvObsWrapper

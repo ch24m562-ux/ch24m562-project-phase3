@@ -108,6 +108,10 @@ class TelecomEnv(gym.Env):
         lead_distribution: str = "geometric",  # [CHANGE 7] "geometric"|"lognormal"
         lead_sigma: float = 0.5,            # [CHANGE 7] lognormal shape parameter
         use_stochastic_grid: bool = False,  # [CHANGE 9] Markov chain grid outage
+        use_eta_obs: bool = False,          # [CHANGE 10] ETA-aware extension only
+                                            # False (default): delivery_remaining_n=0
+                                            # True: agent sees remaining delivery hours
+                                            # ONLY use True for extension experiments
     ):
         super().__init__()
 
@@ -144,6 +148,12 @@ class TelecomEnv(gym.Env):
             self._p_outage  = 0.0
             self._p_restore = 1.0
         self._grid_state = True   # current Markov state (overwritten in reset)
+
+        # ── [CHANGE 10] ETA observability — extension only ────────────────────
+        # False (default): delivery_remaining_n = 0.0 for ALL main experiments
+        # True:  agent sees remaining delivery hours (requires lognormal + vendor ETA)
+        # Main thesis uses False. ETA-aware extension uses True.
+        self.use_eta_obs = bool(use_eta_obs)
 
         # ── [CHANGE 3] Validate lead_scenario — "multi" now allowed ──────────
         valid = list(self.LEAD_TIME_SCENARIOS.keys()) + [self.MULTI_SCENARIO]
@@ -295,11 +305,15 @@ class TelecomEnv(gym.Env):
             self.lead_p = float(self.LEAD_TIME_SCENARIOS[scenario])
         # else: self.lead_p already set in __init__ and stays fixed
 
-        # Start index selection (UNCHANGED)
+        # ── Start index selection — mentor fix (pre-split data) ──────────────
+        # When make_env passes pre-split df_train / df_test:
+        #   eval:  data = df_test (360 rows) → always start at index 0
+        #   train: data = df_train (1080 rows) → random start in [0, len-episode_len]
+        # Old code used train_end_idx which gave max_start=0 → always started at 0.
         if self.eval_mode:
-            self._t_idx = int(self.test_start_idx)
+            self._t_idx = 0                              # start of held-out test split
         else:
-            max_start = max(0, self.train_end_idx - self.episode_len)
+            max_start = max(0, len(self.data) - self.episode_len)
             self._t_idx = int(self.rng.integers(0, max(1, max_start + 1)))
 
         # Initial SoC (UNCHANGED)
@@ -616,7 +630,12 @@ class TelecomEnv(gym.Env):
         hour   = int(row.get("hour", 0))
         p_pv   = float(row["solar_kwh"])
         p_load = float(row["load_kwh"])
-        grid   = float(row["grid_available"])
+
+        # ── [FIX 3] Grid state — use Markov state when stochastic, else dataset ─
+        if self.use_stochastic_grid:
+            grid = float(self._grid_state)   # must match what step() used for energy balance
+        else:
+            grid = float(row["grid_available"])
 
         soc_n  = (self._soc - self.SOC_MIN) / (self.SOC_MAX - self.SOC_MIN)
         inv_n  = self._inv_kwh / max(self.tank_cap_kwh, 1e-9)
@@ -630,15 +649,21 @@ class TelecomEnv(gym.Env):
         # [CHANGE 2] 10th dimension — normalised by HOURS_ORDER_MAX
         hours_n = float(np.clip(self._hours_since_order / self.HOURS_ORDER_MAX, 0.0, 1.0))
 
-        # [CHANGE 8] 11th dimension — delivery_remaining_n
-        # Lognormal: informative (remaining hours until delivery / HOURS_ORDER_MAX)
-        # Geometric: 0.0 always (memoryless — remaining wait is unknown)
-        if self.lead_distribution == "lognormal" and self._pending_flag == 1:
+        # ── [FIX 10 / CHANGE 10] delivery_remaining_n — ETA-aware extension only ─
+        # Default (use_eta_obs=False): always 0.0 — agent reasons under uncertainty
+        #   using only hours_since_order (elapsed time signal, no oracle future).
+        # Extension (use_eta_obs=True): agent sees vendor ETA. Only active when
+        #   lead_distribution="lognormal" (geometric is memoryless — no meaningful ETA).
+        # Main thesis uses use_eta_obs=False for ALL experiments.
+        if (self.use_eta_obs
+                and self.lead_distribution == "lognormal"
+                and self._pending_flag == 1
+                and self._delivery_in_hours > 0):
             delivery_rem_n = float(np.clip(
-                max(0.0, self._delivery_in_hours) / self.HOURS_ORDER_MAX, 0.0, 1.0
+                self._delivery_in_hours / self.HOURS_ORDER_MAX, 0.0, 1.0
             ))
         else:
-            delivery_rem_n = 0.0
+            delivery_rem_n = 0.0   # default for all main experiments
 
         # [CHANGE 6] Time encoding ablation — zero sin/cos to remove diurnal signal
         if not self.use_time_encoding:
@@ -676,6 +701,7 @@ class TelecomEnv(gym.Env):
             "tank_scale":        float(self.tank_scale),
             "lead_distribution": self.lead_distribution,
             "stochastic_grid":   self.use_stochastic_grid,
+            "use_eta_obs":       self.use_eta_obs,
         }
 
     # ── Render (UNCHANGED) ────────────────────────────────────────────────────

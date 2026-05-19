@@ -32,8 +32,9 @@ env:
   obs_load_max: 12.0             # cap for load normalisation
 
   # Episode lengths
-  train_episode_len: 720         # steps = 30 days × 24h
-  eval_episode_len: 720          # must match train for fair comparison
+  train_episode_len: 720         # steps = 30 days × 24h (rolling windows over train split)
+  eval_episode_len: 360          # steps = 15 days × 24h — matches held-out test split exactly
+                                 # (test split = rows 1080–1440 = 360 rows; must not exceed this)
 
   # Train/test split — FIXED from Phase 2 bug
   train_days: 45                 # 45 days training
