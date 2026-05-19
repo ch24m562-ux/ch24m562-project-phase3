@@ -64,6 +64,10 @@ lead_time:
     p: 0.00833                   # 1/120 → mean 5 days (robustness stress test)
     mean_hours: 120
 
+  monsoon:
+    p: 0.01389                   # 1/72 → mean 72h — heavy monsoon, rural India
+    mean_hours: 72               # between delayed and very_delayed; fills curve gap
+
   no_delay:
     p: 1.00000                   # instant delivery — ideal performance upper bound
     mean_hours: 0

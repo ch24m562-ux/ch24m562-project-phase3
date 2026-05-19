@@ -110,7 +110,9 @@ class B1Policy:
         return
 
     def act(self, obs: np.ndarray, env=None) -> int:
-        soc_n, inv_n, pending, pqty_n, pv_n, load_n, grid, sin_h, cos_h = obs.tolist()
+        # Slice first 9 dims — safe for 9D, 10D, or 11D obs (Phase 3 extended obs)
+        o = np.asarray(obs, dtype=np.float32).flatten()
+        soc_n, inv_n, pending, pqty_n, pv_n, load_n, grid, sin_h, cos_h = o[:9].tolist()
 
         grid_off = grid < 0.5
         bat_low = soc_n < self.dg_soc_thresh

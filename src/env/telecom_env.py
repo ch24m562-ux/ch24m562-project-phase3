@@ -77,6 +77,9 @@ class TelecomEnv(gym.Env):
         "normal":       lead_cfg["normal"]["p"],
         "delayed":      lead_cfg["delayed"]["p"],
         "very_delayed": lead_cfg["very_delayed"]["p"],
+        "monsoon":      lead_cfg["monsoon"]["p"],       # 72h — heavy monsoon
+        "no_delay":     lead_cfg["no_delay"]["p"],      # instant — upper bound
+        "extreme":      lead_cfg["extreme"]["p"],       # 14 days — disaster stress
     }
     MULTI_SCENARIO = "multi"   # sentinel — resolved at reset()
 
