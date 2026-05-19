@@ -46,6 +46,12 @@ env:
   init_inv_frac_eval_low: 0.30   # evaluation randomises over [0.30, 0.90]
   init_inv_frac_eval_high: 0.90
 
+  # Stochastic grid outage (Phase 3)
+  # False: read grid_available directly from dataset (deterministic — Phase 2 behaviour)
+  # True:  fit 2-state Markov chain from site data; sample new pattern each episode
+  #        prevents agent memorising exact outage timing; more realistic generalisation
+  stochastic_grid: false         # default off — set true for stochastic training runs
+
 
 # ── Environment: Lead time scenarios ────────────────────────
 lead_time:

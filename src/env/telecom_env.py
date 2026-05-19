@@ -17,6 +17,9 @@
 #   8. Observation space upgraded 10D → 11D: added delivery_remaining_n (dim 11)
 #      - geometric: always 0.0 (memoryless — remaining wait is unknown)
 #      - lognormal: clip(remaining_hours / HOURS_ORDER_MAX, 0, 1) — informative
+#   9. Stochastic grid outage: optional 2-state Markov chain replaces deterministic
+#      dataset read. Fitted per-site from ITU data. Prevents agent memorising exact
+#      outage timing. Default off (use_stochastic_grid=False) for backward compat.
 
 from __future__ import annotations
 
@@ -55,6 +58,8 @@ class TelecomEnv(gym.Env):
     - Lead time: geometric(p) delivery or lognormal(mu, sigma).
     - lead_scenario="multi": samples from pool each episode reset (Phase 3).
     - tank_scale: scales tank capacity (e.g. 2.0 = 144h buffer instead of 72h).
+    - use_stochastic_grid: if True, fits 2-state Markov chain from site data and
+      samples new outage pattern each episode (prevents timing memorisation).
     """
 
     metadata = {"render_modes": ["text"], "render_fps": 4}
@@ -102,6 +107,7 @@ class TelecomEnv(gym.Env):
         use_time_encoding: bool = True,     # [CHANGE 6] False → zeros sin_h/cos_h
         lead_distribution: str = "geometric",  # [CHANGE 7] "geometric"|"lognormal"
         lead_sigma: float = 0.5,            # [CHANGE 7] lognormal shape parameter
+        use_stochastic_grid: bool = False,  # [CHANGE 9] Markov chain grid outage
     ):
         super().__init__()
 
@@ -129,6 +135,15 @@ class TelecomEnv(gym.Env):
             )
         self.lead_distribution = lead_distribution
         self.lead_sigma        = float(lead_sigma)
+
+        # ── [CHANGE 9] Stochastic grid outage — 2-state Markov chain ─────────
+        self.use_stochastic_grid = bool(use_stochastic_grid)
+        if self.use_stochastic_grid:
+            self._p_outage, self._p_restore = self._fit_markov_chain()
+        else:
+            self._p_outage  = 0.0
+            self._p_restore = 1.0
+        self._grid_state = True   # current Markov state (overwritten in reset)
 
         # ── [CHANGE 3] Validate lead_scenario — "multi" now allowed ──────────
         valid = list(self.LEAD_TIME_SCENARIOS.keys()) + [self.MULTI_SCENARIO]
@@ -229,6 +244,43 @@ class TelecomEnv(gym.Env):
             return int(arr[0]), int(arr[1])
         raise ValueError(f"Invalid action format: {action}")
 
+    # ── [CHANGE 9] Markov chain fitter ───────────────────────────────────────
+    def _fit_markov_chain(self) -> Tuple[float, float]:
+        """
+        Fit 2-state Markov chain from site data grid_available column.
+
+        States: grid_on (True) ↔ grid_off (False)
+        Transitions estimated by counting:
+            p_outage  = P(off | on)  = n(on→off) / n(on)
+            p_restore = P(on  | off) = n(off→on) / n(off)
+
+        Uses FULL dataset (60 days) for stable estimates — more transitions
+        gives lower variance in p estimates vs 45-day training split only.
+
+        Stationary distribution:
+            π_on  = p_restore / (p_outage + p_restore)
+            π_off = p_outage  / (p_outage + p_restore)
+        Mean outage duration  = 1 / p_restore  hours
+        Mean inter-outage gap = 1 / p_outage   hours
+        """
+        grid = self.data["grid_available"].astype(bool).values
+        on_mask  = grid[:-1] == True
+        off_mask = grid[:-1] == False
+
+        n_on       = int(on_mask.sum())
+        n_off      = int(off_mask.sum())
+        n_on_off   = int((on_mask  & (grid[1:] == False)).sum())
+        n_off_on   = int((off_mask & (grid[1:] == True)).sum())
+
+        p_outage  = float(n_on_off  / max(n_on,  1))
+        p_restore = float(n_off_on  / max(n_off, 1))
+
+        # Guard: if site has no outages at all, keep deterministic behaviour
+        if p_outage == 0.0:
+            self.use_stochastic_grid = False   # fall back silently
+
+        return p_outage, p_restore
+
     # ── Gym API ───────────────────────────────────────────────────────────────
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
@@ -266,6 +318,12 @@ class TelecomEnv(gym.Env):
         self._had_stockout_pending = False
         self._emergency_arrivals   = 0
 
+        # ── [CHANGE 9] Initialise Markov grid state from stationary dist ──────
+        if self.use_stochastic_grid:
+            denom = self._p_outage + self._p_restore
+            p_on  = self._p_restore / max(denom, 1e-9)
+            self._grid_state = bool(self.rng.random() < p_on)
+
         self._step_num = 0
         self._done     = False
 
@@ -280,11 +338,23 @@ class TelecomEnv(gym.Env):
 
         dg_raw, order_raw = self.decode_action(action)
 
-        # Exogenous data (UNCHANGED)
+        # Exogenous data
         row        = self.data.iloc[self._t_idx]
         p_pv_kwh   = float(row["solar_kwh"])
         p_load_kwh = float(row["load_kwh"])
-        grid_avail = bool(row["grid_available"])
+
+        # ── [CHANGE 9] Grid availability — Markov or dataset ─────────────────
+        if self.use_stochastic_grid:
+            # Transition current grid state
+            if self._grid_state:   # currently on → may go off
+                if self.rng.random() < self._p_outage:
+                    self._grid_state = False
+            else:                  # currently off → may restore
+                if self.rng.random() < self._p_restore:
+                    self._grid_state = True
+            grid_avail = self._grid_state
+        else:
+            grid_avail = bool(row["grid_available"])
 
         # Hard masking (UNCHANGED)
         dg_on, order_qty_kwh, mask_info = self._apply_action_mask(dg_raw, order_raw)
@@ -605,6 +675,7 @@ class TelecomEnv(gym.Env):
             "init_inv_frac":     float(getattr(self, "_init_inv_frac", 0.6)),
             "tank_scale":        float(self.tank_scale),
             "lead_distribution": self.lead_distribution,
+            "stochastic_grid":   self.use_stochastic_grid,
         }
 
     # ── Render (UNCHANGED) ────────────────────────────────────────────────────

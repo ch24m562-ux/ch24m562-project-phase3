@@ -52,7 +52,8 @@ def mask_fn(env) -> np.ndarray:
 # ── make_env — same structure as original ────────────────────────────────────
 def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str,
              tank_scale: float = 1.0, use_time_encoding: bool = True,
-             lead_distribution: str = "geometric"):
+             lead_distribution: str = "geometric",
+             use_stochastic_grid: bool = False):
     def _init():
         df, params = load_site(site_csv)
         df_train, df_test = train_test_split(df)
@@ -74,6 +75,7 @@ def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str,
             tank_scale=tank_scale,
             use_time_encoding=use_time_encoding,
             lead_distribution=lead_distribution,
+            use_stochastic_grid=use_stochastic_grid,
         )
         env = Monitor(env)
         env = ActionMasker(env, mask_fn)
@@ -129,6 +131,9 @@ def main():
     ap.add_argument("--lead_dist",  type=str,   default="geometric",
                     choices=["geometric", "lognormal"],
                     help="Lead time distribution. lognormal samples at order placement.")
+    ap.add_argument("--stochastic_grid", action="store_true",
+                    help="Use 2-state Markov chain for grid outage (fitted from site data). "
+                         "Prevents agent memorising exact outage timing.")
     args = ap.parse_args()
 
     os.makedirs(args.logdir, exist_ok=True)
@@ -167,6 +172,7 @@ def main():
                 "tank_scale":     args.tank_scale,
                 "use_time_enc":   not args.no_time_enc,
                 "lead_dist":      args.lead_dist,
+                "stochastic_grid": args.stochastic_grid,
                 "git_commit":     _get_git_commit(),
             })
 
@@ -178,7 +184,8 @@ def main():
                          lead_scenario=args.lead,
                          tank_scale=args.tank_scale,
                          use_time_encoding=not args.no_time_enc,
-                         lead_distribution=args.lead_dist)
+                         lead_distribution=args.lead_dist,
+                         use_stochastic_grid=args.stochastic_grid)
                 for i in range(n_envs)
             ])
             vec_env = VecNormalize(
@@ -191,7 +198,8 @@ def main():
                          lead_scenario=args.lead,
                          tank_scale=args.tank_scale,
                          use_time_encoding=not args.no_time_enc,
-                         lead_distribution=args.lead_dist)
+                         lead_distribution=args.lead_dist,
+                         use_stochastic_grid=args.stochastic_grid)
             ])
             eval_env = VecNormalize(
                 eval_env, norm_obs=True, norm_reward=False,
