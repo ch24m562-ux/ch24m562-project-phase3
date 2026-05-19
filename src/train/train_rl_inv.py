@@ -271,7 +271,12 @@ def main():
             # best_mean_reward is -inf if EvalCallback never fired (e.g. short
             # test runs where timesteps < eval_freq). Guard against passing -inf
             # to MLflow which causes the run to be marked FAILED silently.
-            best_reward = eval_cb.best_mean_reward
+            # MaskableEvalCallback may not expose best_mean_reward identically
+            # to EvalCallback — use getattr with fallback chain
+            best_reward = getattr(
+                eval_cb, "best_mean_reward",
+                getattr(eval_cb, "last_mean_reward", float("nan"))
+            )
             mlflow.log_metrics({
                 "best_eval_reward": float(best_reward) if np.isfinite(best_reward) else -9999.0,
                 "wall_time_min":    round(wall_time_min, 1),
