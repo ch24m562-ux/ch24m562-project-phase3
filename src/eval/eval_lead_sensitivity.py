@@ -74,11 +74,12 @@ LEAD_SCENARIOS_ORDERED = [
 # model_subdir: subdirectory under model_dir where checkpoints are saved
 # train_scenario: what lead the model was trained on (for CSV metadata)
 POLICY_META = {
-    "rlinv":  ("rlinv",        "maskable", "normal",  False),
-    "multi":  ("rlinv_multi",  "maskable", "multi",   False),
-    "trackb": ("trackb",       "ppo",      "normal",  False),
-    "b1":     (None,           None,       "n/a",     True),
-    "b0":     (None,           None,       "n/a",     True),
+    # (model_subdir, algo, train_scenario, is_baseline, env_type)
+    "rlinv":  ("rlinv",        "maskable", "normal",  False, "track_a"),
+    "multi":  ("rlinv_multi",  "maskable", "multi",   False, "track_a"),
+    "trackb": ("trackb",       "ppo",      "normal",  False, "track_b"),
+    "b1":     (None,           None,       "n/a",     True,  "track_a"),
+    "b0":     (None,           None,       "n/a",     True,  "track_a"),
 }
 
 
@@ -105,21 +106,39 @@ def _load_baseline(name: str):
 # ── Env factory ────────────────────────────────────────────────────────────────
 
 def _make_env_factory(site_csv: str, vecnorm_path: str,
-                      ep_len: int, inv_low: float, inv_high: float):
-    """Returns env_factory(site, lead, seed) compatible with evaluate()."""
-    def factory(site: str, lead: str, seed: int) -> TelecomEnv:
-        df, params = load_site(site_csv)
-        _, df_test = train_test_split(df)
-        env = TelecomEnv(
-            site_data=df_test,
-            site_params=params,
-            episode_len=ep_len,
-            eval_mode=True,
-            lead_scenario=lead,
-            seed=seed,
-            init_inv_frac_low=inv_low,
-            init_inv_frac_high=inv_high,
-        )
+                      ep_len: int, inv_low: float, inv_high: float,
+                      env_type: str = "track_a"):
+    """Returns env_factory(site, lead, seed) compatible with evaluate().
+
+    env_type:
+      "track_a" — standard TelecomEnv, 11D obs (rlinv, multi, b0, b1)
+      "track_b" — make_track_b_eval_env, 6D obs (trackb)
+    """
+    def factory(site: str, lead: str, seed: int):
+        if env_type == "track_b":
+            # TrackB has its own env builder + 6D obs space.
+            # Must match the 6D vecnorm.pkl — never mix with 11D Track A stats.
+            from train.train_track_b import make_track_b_eval_env
+            env = make_track_b_eval_env(
+                site_csv, seed=seed, lead_scenario=lead,
+                episode_len=ep_len,
+                init_inv_frac_low=inv_low,
+                init_inv_frac_high=inv_high,
+            )
+        else:
+            df, params = load_site(site_csv)
+            _, df_test = train_test_split(df)
+            env = TelecomEnv(
+                site_data=df_test,
+                site_params=params,
+                episode_len=ep_len,
+                eval_mode=True,
+                lead_scenario=lead,
+                seed=seed,
+                init_inv_frac_low=inv_low,
+                init_inv_frac_high=inv_high,
+            )
+
         if vecnorm_path and os.path.exists(vecnorm_path):
             return VecNormObsWrapper(env, vecnorm_path)
         if vecnorm_path and not os.path.exists(vecnorm_path):
@@ -138,14 +157,34 @@ def run_sensitivity(
     leads: list[str],
     n_episodes: int = 5,
     verbose: bool = True,
+    checkpoint_csv: str = "",
 ) -> pd.DataFrame:
-    """Evaluate all (policy × site × seed × lead) combos. Returns combined DataFrame."""
+    """Evaluate all (policy × site × seed × lead) combos. Returns combined DataFrame.
+
+    If checkpoint_csv is set, results for each (policy, site, seed) are
+    appended to that file immediately — so a crash partway through does
+    not lose already-completed evaluations. Re-run with the same
+    checkpoint_csv and this function will skip combos already present.
+    """
 
     ep_len   = env_cfg["eval_episode_len"]
     inv_low  = env_cfg["init_inv_frac_eval_low"]
     inv_high = env_cfg["init_inv_frac_eval_high"]
     rc       = {"alpha": reward_cfg["alpha"], "beta": reward_cfg["beta"]}
     lead_to_hours = {name: hrs for name, hrs in LEAD_SCENARIOS_ORDERED}
+
+    # ── Load existing checkpoint, build skip-set of (policy, site, seed) ──────
+    done_combos = set()
+    if checkpoint_csv and os.path.exists(checkpoint_csv):
+        try:
+            existing = pd.read_csv(checkpoint_csv)
+            done_combos = set(
+                zip(existing["policy"], existing["site"], existing["seed"])
+            )
+            print(f"[Checkpoint] Found {len(done_combos)} completed (policy,site,seed) "
+                  f"combos in {checkpoint_csv} — will skip these.")
+        except Exception as e:
+            print(f"[WARN] Could not read checkpoint {checkpoint_csv}: {e}")
 
     all_dfs = []
 
@@ -154,12 +193,19 @@ def run_sensitivity(
             print(f"[WARN] Unknown policy '{policy_name}' — skipping")
             continue
 
-        subdir, algo, train_scenario, is_baseline = POLICY_META[policy_name]
+        subdir, algo, train_scenario, is_baseline, env_type = POLICY_META[policy_name]
 
         for site in sites:
             site_csv = f"data/processed/{site}.csv"
 
             for seed in seeds:
+
+                # ── Resume: skip combos already in checkpoint ────────────
+                if (policy_name, site, seed) in done_combos:
+                    print(f"[SKIP] {policy_name} | {site} | seed={seed} "
+                          f"(already in checkpoint)")
+                    continue
+
                 print(f"\n{'='*60}")
                 print(f"[LeadSens] policy={policy_name}  site={site}  seed={seed}")
 
@@ -187,6 +233,7 @@ def run_sensitivity(
                     ep_len=ep_len,
                     inv_low=inv_low,
                     inv_high=inv_high,
+                    env_type=env_type,
                 )
 
                 meta = {
@@ -216,6 +263,20 @@ def run_sensitivity(
                 # Tag with mean lead hours for plotting
                 df["mean_lead_hours"] = df["lead_scenario"].map(lead_to_hours)
                 all_dfs.append(df)
+
+                # ── Checkpoint: append immediately so crashes don't lose data ──
+                if checkpoint_csv:
+                    os.makedirs(os.path.dirname(checkpoint_csv) or ".", exist_ok=True)
+                    write_header = not os.path.exists(checkpoint_csv)
+                    df.to_csv(checkpoint_csv, mode="a", header=write_header, index=False)
+
+    # ── Combine new results with any previously-checkpointed results ─────────
+    if checkpoint_csv and os.path.exists(checkpoint_csv):
+        try:
+            full = pd.read_csv(checkpoint_csv)
+            return full
+        except Exception as e:
+            print(f"[WARN] Could not re-read checkpoint {checkpoint_csv}: {e}")
 
     if not all_dfs:
         print("[WARN] No results collected — check model paths and policy names.")
@@ -422,6 +483,9 @@ def main():
     print(f"{'='*60}\n")
 
     # ── Run ───────────────────────────────────────────────────────────────────
+    checkpoint_csv = args.out_csv.replace(".csv", "_checkpoint.csv")
+    print(f"  Checkpoint: {checkpoint_csv}  (resumable — safe to re-run if interrupted)\n")
+
     df = run_sensitivity(
         policies=args.policies,
         sites=args.sites,
@@ -430,6 +494,7 @@ def main():
         leads=args.leads,
         n_episodes=args.episodes,
         verbose=not args.quiet,
+        checkpoint_csv=checkpoint_csv,
     )
 
     if df.empty:

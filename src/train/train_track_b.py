@@ -92,7 +92,9 @@ def _make_ss_order_fn(base_env: TelecomEnv) -> Callable:
     )
 
     def order_fn(base_obs, _env):
-        soc_n, inv_n, pending, pqty_n, pv_n, load_n, grid, sin_h, cos_h = base_obs.tolist()
+        # Safe: use indexed access — works with 9D (Phase 2) and 10D (Phase 3) obs
+        _obs = base_obs.tolist()
+        inv_n, pending = _obs[1], _obs[2]
         return int(ss.order_action(inv_n=inv_n, pending_flag=pending))
 
     return order_fn
@@ -180,7 +182,7 @@ def main():
     os.makedirs(args.logdir, exist_ok=True)
 
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
-    sites = ["site1", "site7", "site5"] if args.all_sites else [args.site]
+    sites = [f"site{i}" for i in range(1, 11)] if args.all_sites else [args.site]
 
     for site in sites:
         # FIX (Bug 3): was `args.site` — used the CLI arg instead of the loop

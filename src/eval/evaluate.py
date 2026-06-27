@@ -65,7 +65,14 @@ class VecNormObsWrapper(gym.Wrapper):
         # DummyVecEnv needed only to satisfy VecNormalize.load() interface.
         # We will NEVER call self._vn.step() — only self._vn.normalize_obs().
         _dummy = DummyVecEnv([lambda: base_env])
-        self._vn: VecNormalize = VecNormalize.load(vecnorm_path, _dummy)
+        # ── Shape check — catch obs dimension mismatches early ────────────
+        vn_temp = VecNormalize.load(vecnorm_path, _dummy)
+        if vn_temp.observation_space.shape != base_env.observation_space.shape:
+            print(f"[WARN] VecNorm shape {vn_temp.observation_space.shape} "
+                  f"!= env shape {base_env.observation_space.shape}")
+        # ─────────────────────────────────────────────────────────────────
+    
+        self._vn: VecNormalize = vn_temp
         self._vn.training = False     # freeze: do not update running stats
         self._vn.norm_reward = False  # reward normalization off
 
@@ -150,7 +157,36 @@ def _predict_with_optional_mask(policy, obs, mask):
         return int(np.asarray(a).item())
 
 
-def _policy_act(policy, obs, env):
+def _is_mpc_policy(policy) -> bool:
+    """True for MPC/Oracle policies which need env-aware predict() signature."""
+    return type(policy).__name__ in ("MPCDispatchB1Policy", "OracleMPCPolicy")
+
+
+def _policy_act(policy, obs, env, site_id=None):
+    # MPC policies need env access for site params, forecasts, and current step.
+    # site_id is passed explicitly from the eval loop (args.site / loop variable)
+    # since TelecomEnv does not store a site_id attribute on itself.
+    if _is_mpc_policy(policy):
+        base = env
+        while hasattr(base, "env"):
+            base = base.env
+        t = getattr(base, "_t_idx", None)   # TelecomEnv attribute (local index into eval slice)
+        try:
+            a, _ = policy.predict(obs, env=env, site_id=site_id, t=t)
+        except KeyError as e:
+            # mpc_forecast raises KeyError on a forecast-cache miss by design
+            # (see mpc_policy.py MPCDispatchB1Policy._get_forecasts) -- surface
+            # this clearly at the point of failure rather than letting it
+            # propagate as a bare traceback mid-grid-run.
+            raise RuntimeError(
+                f"[evaluate.py] MPC-forecast policy failed at site_id={site_id!r} "
+                f"t={t}: {e}\n"
+                f"This stops the run rather than silently falling back to "
+                f"persistence -- re-check the --forecast_cache path and that "
+                f"it was generated for this site/scenario before retrying."
+            ) from e
+        return int(a)
+
     mask = None
     if hasattr(env, "get_action_mask"):
         try:
@@ -249,7 +285,7 @@ def evaluate(
                           "grid_avail": [], "soc": [],
                           "pipe_pct": [], "order_kwh": []}
                 while not (terminated or truncated):
-                    a = _policy_act(policy, obs, env)
+                    a = _policy_act(policy, obs, env, site_id=site)
                     obs, r, terminated, truncated, info = env.step(a)
                     last_info = info
                     if _trace_this:
@@ -370,12 +406,16 @@ if __name__ == "__main__":
     parser.add_argument("--episodes",     type=int, default=5)
     parser.add_argument("--seed",         type=int, default=42)
     parser.add_argument("--out_csv",      default="")
-    parser.add_argument("--policy_type",  default="rl", choices=["rl", "b0", "b1"])
+    parser.add_argument("--policy_type",  default="rl", choices=["rl", "b0", "b1", "mpc", "oracle"])
+    parser.add_argument("--forecast_cache", type=str, default="",
+                        help="Path to forecast cache pkl for MPC (omit for persistence MPC)")
+    parser.add_argument("--mpc_horizon",   type=int, default=24,
+                        help="MPC planning horizon in hours (default 24)")
     parser.add_argument("--algo",         default="maskable", choices=["maskable", "ppo"])
     parser.add_argument("--env_type", default="track_a",
                         choices=["track_a", "track_b", "a5", "a6"])
     parser.add_argument("--episode_len",  type=int, default=360,
-                        help="Evaluation episode length (default 360 = 15-day test split)")
+                        help="Evaluation episode length (default 360 = full test split)")
     parser.add_argument("--init_diesel_low",  type=float, default=0.3)
     parser.add_argument("--init_diesel_high", type=float, default=0.9)
     parser.add_argument("--trace_out", type=str, default="",
@@ -439,6 +479,45 @@ if __name__ == "__main__":
         from baselines.s_S_policy import B1Policy, SSPolicy
         policy = B1Policy(ss_policy=SSPolicy())
         vecnorm_path = ""   # baselines not trained with VecNormalize
+    elif args.policy_type in ("mpc", "oracle"):
+        from baselines.s_S_policy import SSPolicy
+        from baselines.mpc_policy import MPCDispatchB1Policy, OracleMPCPolicy
+
+        # Load forecast cache if provided (optional -- falls back to persistence)
+        forecast_cache = None
+        if args.forecast_cache and os.path.exists(args.forecast_cache):
+            import pickle
+            with open(args.forecast_cache, "rb") as fh:
+                _raw = pickle.load(fh)
+            # train_forecast.py saves {"cache": {...}, "horizon":, "train_days":, "sites":}
+            # — unwrap to the bare {site_id: {t: {...}}} dict MPCDispatchB1Policy expects.
+            forecast_cache = _raw["cache"] if isinstance(_raw, dict) and "cache" in _raw else _raw
+            cache_horizon = _raw.get("horizon", args.mpc_horizon) if isinstance(_raw, dict) else args.mpc_horizon
+            if cache_horizon != args.mpc_horizon:
+                print(f"[WARN] cache horizon={cache_horizon} != --mpc_horizon={args.mpc_horizon}; using {args.mpc_horizon}")
+            print(f"[INFO] Loaded forecast cache: {args.forecast_cache} ({len(forecast_cache)} sites)")
+        elif args.forecast_cache:
+            print(f"[WARN] forecast_cache not found: {args.forecast_cache} -- using persistence")
+        else:
+            print("[INFO] MPC using persistence forecast (MPC-H24-Persistence-B1)")
+
+        # SSPolicy: same instance as B1 and A6 for fair comparison
+        ss = SSPolicy()
+
+        if args.policy_type == "oracle":
+            policy = OracleMPCPolicy(ss_policy=ss, verbose=False)
+            print("[INFO] Policy: Oracle-MPC-B1 (perfect forecast, H=360)")
+        else:
+            policy = MPCDispatchB1Policy(
+                forecast_cache=forecast_cache,
+                ss_policy=ss,
+                horizon=args.mpc_horizon,
+                verbose=False,
+            )
+            fc_label = "Forecast" if forecast_cache is not None else "Persistence"
+            print(f"[INFO] Policy: MPC-H{args.mpc_horizon}-{fc_label}-B1")
+
+        vecnorm_path = ""   # MPC/Oracle are not RL policies -- no VecNormalize
 
     # ── Env factory ───────────────────────────────────────────────────────────
     def env_factory(site: str, lead: str, seed: int):

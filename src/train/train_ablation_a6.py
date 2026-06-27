@@ -32,8 +32,8 @@ Run all sites (sequentially):
 Evaluate after training:
   python -m src.eval.evaluate --site site5 --lead normal \\
     --policy_type rl --algo maskable --env_type a6 \\
-    --model_path runs/ablation_a6/site5/seed42/site5_final_model \\
-    --vecnorm_path runs/ablation_a6/site5/seed42/site5_vecnormalize.pkl \\
+    --model_path runs/ablation_a6/site5/seed42/site5_s{args.seed}_final \\
+    --vecnorm_path runs/ablation_a6/site5/seed42/site5_vecnorm.pkl \\
     --episodes 30 --seed 42 \\
     --policy_label A6 --train_scenario normal --experiment_tag ablation_a6 \\
     --train_steps 400000 --init_diesel_low 0.3 --init_diesel_high 0.9 \\
@@ -54,10 +54,15 @@ import sys
 import argparse
 from typing import Callable, List
 
+import mlflow
+import csv
+import subprocess
+from datetime import datetime
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from config_loader import ppo_cfg, policy_cfg, train_cfg, env_cfg, registry_cfg
 from env.data_loader import load_site, train_test_split
 from env.a6_env import make_a6_env
 
@@ -70,14 +75,14 @@ from stable_baselines3.common.monitor import Monitor
 
 # ── Hyperparameters — IDENTICAL to train_rl_inv.py and train_ablation_a5.py ──
 
-DEFAULT_TIMESTEPS = 400_000   # same as all_sites runs (convergence check confirmed sufficient)
-N_ENVS            = 4
+# timesteps from hparams   # same as all_sites runs (convergence check confirmed sufficient)
+# n_envs from hparams
 
-TRAIN_EP_LEN = 720
-EVAL_EP_LEN  = 720
+TRAIN_EP_LEN = env_cfg["train_episode_len"]
+EVAL_EP_LEN  = env_cfg["eval_episode_len"]
 
-POLICY_NET = [256, 256]
-LR_START   = 3e-4
+# policy_net from hparams
+# lr from hparams
 
 # All 10 sites — same order as all_sites runs
 ALL_SITES: List[str] = [
@@ -156,11 +161,22 @@ def make_env(
     return _init
 
 
+# ── Git commit helper ─────────────────────────────────────────────────────────
+
+def _get_git_commit() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except Exception:
+        return "unknown"
+
+
 # ── Training loop ─────────────────────────────────────────────────────────────
 
 def train_site(site: str, args) -> None:
     site_csv = f"data/processed/{site}.csv"
-    logdir   = os.path.join(args.logdir, site, f"seed{args.seed}")
+    logdir = args.logdir
     os.makedirs(logdir, exist_ok=True)
 
     print(f"\n{'='*60}")
@@ -181,9 +197,9 @@ def train_site(site: str, args) -> None:
             init_inv_frac_low=args.init_diesel_low,
             init_inv_frac_high=args.init_diesel_high,
         )
-        for i in range(N_ENVS)
+        for i in range(train_cfg["n_envs"])
     ])
-    vec_env = VecNormalize(vec_env, norm_obs=True, norm_reward=False, clip_obs=10.0)
+    vec_env = VecNormalize(vec_env, norm_obs=True, norm_reward=False, clip_obs=policy_cfg["obs_clip"])
 
     # ── Eval env ──────────────────────────────────────────────────────────────
     # CRITICAL: init inventory [0.3, 0.9] matches RLInv final evaluation range.
@@ -193,7 +209,7 @@ def train_site(site: str, args) -> None:
                  lead_scenario=args.lead,
                  init_inv_frac_low=0.3, init_inv_frac_high=0.9)
     ])
-    eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, clip_obs=10.0)
+    eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, clip_obs=policy_cfg["obs_clip"])
     eval_env.training    = False
     eval_env.norm_reward = False
 
@@ -201,16 +217,16 @@ def train_site(site: str, args) -> None:
     model = MaskablePPO(
         "MlpPolicy",
         vec_env,
-        learning_rate=linear_schedule(LR_START),
-        n_steps=2048,
-        batch_size=256,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_range=0.2,
-        ent_coef=0.01,
-        vf_coef=0.5,
-        max_grad_norm=0.5,
-        policy_kwargs=dict(net_arch=POLICY_NET),
+        learning_rate=linear_schedule(ppo_cfg["learning_rate"]),
+        n_steps=ppo_cfg["n_steps"],
+        batch_size=ppo_cfg["batch_size"],
+        gamma=ppo_cfg["gamma"],
+        gae_lambda=ppo_cfg["gae_lambda"],
+        clip_range=ppo_cfg["clip_range"],
+        ent_coef=ppo_cfg["ent_coef"],
+        vf_coef=ppo_cfg["vf_coef"],
+        max_grad_norm=ppo_cfg["max_grad_norm"],
+        policy_kwargs=dict(net_arch=policy_cfg["net_arch"]),
         verbose=1,
         tensorboard_log=logdir,
         seed=args.seed,
@@ -220,8 +236,8 @@ def train_site(site: str, args) -> None:
         eval_env,
         best_model_save_path=os.path.join(logdir, f"{site}_best"),
         log_path=os.path.join(logdir, f"{site}_eval"),
-        eval_freq=10_000,
-        n_eval_episodes=3,
+        eval_freq=train_cfg["eval_freq"],
+        n_eval_episodes=train_cfg["n_eval_episodes"],
         deterministic=True,
         render=False,
     )
@@ -229,14 +245,29 @@ def train_site(site: str, args) -> None:
     model.learn(total_timesteps=args.timesteps, callback=eval_cb)
 
     # ── Save ──────────────────────────────────────────────────────────────────
-    model_path = os.path.join(logdir, f"{site}_final_model.zip")
-    vn_path    = os.path.join(logdir, f"{site}_vecnormalize.pkl")
+    model_path = os.path.join(logdir, f"{site}_s{args.seed}_final.zip")
+    vn_path    = os.path.join(logdir, f"{site}_s{args.seed}_vecnorm.pkl")
 
     model.save(model_path)
     vec_env.save(vn_path)
 
     vec_env.close()
     eval_env.close()
+
+    # ── MLflow logging ────────────────────────────────────────────────────────
+    best_reward = eval_cb.best_mean_reward
+    with mlflow.start_run(run_name=f"{site}_A6_s{args.seed}"):
+        mlflow.log_params({
+            "site": site, "seed": args.seed, "policy": "A6",
+            "lead_scenario": args.lead, "gamma": ppo_cfg["gamma"],
+            "n_envs": train_cfg["n_envs"], "total_timesteps": args.timesteps,
+            "git_commit": _get_git_commit(),
+        })
+        mlflow.log_metrics({
+            "best_eval_reward": float(best_reward) if np.isfinite(best_reward) else -9999.0,
+        })
+        mlflow.log_artifact(model_path)
+        mlflow.log_artifact(vn_path)
 
     print(f"\n[A6] Saved model:   {model_path}")
     print(f"[A6] Saved VecNorm: {vn_path}")
@@ -262,8 +293,9 @@ def main():
     ap.add_argument("--all_sites",        action="store_true",
                     help="train all 10 sites sequentially")
     ap.add_argument("--lead",             type=str,  default="normal",
-                    choices=["fast", "normal", "delayed"])
-    ap.add_argument("--timesteps",        type=int,  default=DEFAULT_TIMESTEPS)
+                    choices=["fast", "normal", "delayed", "very_delayed", "multi"])
+    ap.add_argument("--timesteps",        type=int,  default=train_cfg["total_timesteps"])
+    ap.add_argument("--tag",              type=str,  default="phase3")
     ap.add_argument("--seed",             type=int,  default=42)
     ap.add_argument("--logdir",           type=str,  default="runs/ablation_a6")
     ap.add_argument("--init_diesel_low",  type=float, default=0.6,
@@ -274,6 +306,10 @@ def main():
     # in train_site() to match RLInv final evaluation range). These args only
     # affect training episode initialisation.
     args = ap.parse_args()
+
+    # ── MLflow setup ──────────────────────────────────────────────────────────
+    mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    mlflow.set_experiment(args.tag)
 
     sites = ALL_SITES if args.all_sites else [args.site]
 
