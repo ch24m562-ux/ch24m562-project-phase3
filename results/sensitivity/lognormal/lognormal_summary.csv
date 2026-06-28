@@ -1,0 +1,13 @@
+policy,scenario,geo_EENS,log_EENS,delta,delta_pct
+rlinv,normal,0.019,0.0,-0.019,-100.0
+rlinv,delayed,3.599,0.595,-3.005,-83.48
+rlinv,monsoon,11.286,3.143,-8.143,-72.15
+rlinv,extreme,53.854,60.912,7.057,13.1
+b1,normal,3.548,1.475,-2.072,-58.41
+b1,delayed,13.432,7.618,-5.814,-43.29
+b1,monsoon,23.204,14.577,-8.627,-37.18
+b1,extreme,57.732,71.685,13.953,24.17
+mpc,normal,3.077,1.0,-2.078,-67.51
+mpc,delayed,13.138,7.102,-6.035,-45.94
+mpc,monsoon,22.837,14.102,-8.735,-38.25
+mpc,extreme,57.379,71.03,13.651,23.79
