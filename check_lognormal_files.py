@@ -19,7 +19,8 @@ print("=" * 70)
 print("PRE-ANALYSIS FILE INTEGRITY CHECK — LOGNORMAL SENSITIVITY")
 print("=" * 70)
 
-files = list(LOGNORMAL_DIR.glob("*.csv"))
+files = [f for f in LOGNORMAL_DIR.glob("*.csv")
+         if f.name not in ("lognormal_summary.csv", "lognormal_thesis_summary.txt")]
 print(f"\nFiles found: {len(files)}  (expected {EXPECTED_FILES})")
 
 issues = []

@@ -26,7 +26,8 @@ if not LOGNORMAL_DIR.exists():
     print(f"[ERROR] {LOGNORMAL_DIR} not found. Run run_sensitivity_lognormal.ps1 first.")
     sys.exit(1)
 
-log_files = list(LOGNORMAL_DIR.glob("*.csv"))
+log_files = [f for f in LOGNORMAL_DIR.glob("*.csv")
+             if f.name != "lognormal_summary.csv"]
 if not log_files:
     print(f"[ERROR] No CSV files in {LOGNORMAL_DIR}.")
     sys.exit(1)
@@ -218,9 +219,13 @@ pr("=" * 70)
 pr("6. SENSITIVITY VERDICT")
 pr("=" * 70)
 
+# Apply same LOW_EENS_THRESHOLD to max_delta_pct to avoid near-zero artifacts
 max_delta_pct = max(
-    (abs(pct_changes[p].get(sc, 0)) for p in FOCUS_POLICIES for sc in SCENARIOS
-     if not np.isnan(pct_changes[p].get(sc, float('nan')))),
+    (abs(pct_changes[p].get(sc, 0))
+     for p in FOCUS_POLICIES for sc in SCENARIOS
+     if not np.isnan(pct_changes[p].get(sc, float('nan')))
+     and geo_pivot.loc[p, sc] >= LOW_EENS_THRESHOLD
+     if p in geo_pivot.index and sc in geo_pivot.columns),
     default=float('nan')
 )
 
@@ -256,10 +261,10 @@ else:
 pr(f"  Distribution Robustness : {verdict}")
 pr(f"  Rankings                : {ranking_conclusion}")
 pr(f"  RLInv advantage         : {'preserved in all scenarios' if advantage_preserved_all else 'changed in at least one scenario'}")
-pr(f"  Maximum EENS change     : {max_delta_pct:.1f}%")
-pr(f"  Mean |delta%| - rlinv   : {mean_sensitivity.get('rlinv', float('nan')):.1f}%")
-pr(f"  Mean |delta%| - b1      : {mean_sensitivity.get('b1', float('nan')):.1f}%")
-pr(f"  Mean |delta%| - mpc     : {mean_sensitivity.get('mpc', float('nan')):.1f}%")
+# max_delta_pct omitted from verdict -- mean |delta EENS| in kWh is more informative
+pr(f"  Mean |delta EENS| rlinv : {mean_sensitivity.get('rlinv', float('nan')):.2f} kWh")
+pr(f"  Mean |delta EENS| b1    : {mean_sensitivity.get('b1', float('nan')):.2f} kWh")
+pr(f"  Mean |delta EENS| mpc   : {mean_sensitivity.get('mpc', float('nan')):.2f} kWh")
 pr()
 pr("  Interpretation:")
 for sent in interpretation.split('. '):
@@ -313,16 +318,16 @@ thesis += [
     f"  Distribution Robustness : {verdict}",
     f"  Rankings                : {ranking_conclusion}",
     f"  RLInv advantage         : {'preserved in all scenarios' if advantage_preserved_all else 'changed in at least one scenario'}",
-    f"  Maximum EENS change     : {max_delta_pct:.1f}%",
-    f"  Mean |delta%| rlinv/b1/mpc: {mean_sensitivity.get('rlinv',float('nan')):.1f}% / {mean_sensitivity.get('b1',float('nan')):.1f}% / {mean_sensitivity.get('mpc',float('nan')):.1f}%",
-    f"  Least sensitive policy  : {least_sensitive_overall} ({mean_sensitivity[least_sensitive_overall]:.1f}% mean |delta|)",
+
+    f"  Mean |delta EENS| rlinv/b1/mpc: {mean_sensitivity.get('rlinv',float('nan')):.2f} / {mean_sensitivity.get('b1',float('nan')):.2f} / {mean_sensitivity.get('mpc',float('nan')):.2f} kWh",
+    f"  Least sensitive policy  : {least_sensitive_overall} ({mean_sensitivity[least_sensitive_overall]:.2f} kWh mean |delta EENS|)",
     "",
     "Scientific Interpretation",
     "-------------------------",
 ]
 for sent in interpretation.split('. '):
     if sent.strip():
-        thesis.append(f"  {sent.strip()}.")
+        thesis.append(f"  {sent.strip().rstrip(chr(46)) + chr(46)}")
 
 thesis += [
     "",

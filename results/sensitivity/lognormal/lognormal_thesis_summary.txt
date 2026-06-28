@@ -31,16 +31,15 @@ Sensitivity Verdict
   Distribution Robustness : PASS
   Rankings                : preserved in all scenarios
   RLInv advantage         : preserved in all scenarios
-  Maximum EENS change     : 100.0%
-  Mean |delta%| rlinv/b1/mpc: 4.6% / 7.6% / 7.6%
-  Least sensitive policy  : rlinv (4.6% mean |delta|)
+  Mean |delta EENS| rlinv/b1/mpc: 4.56 / 7.62 / 7.62 kWh
+  Least sensitive policy  : rlinv (4.56 kWh mean |delta EENS|)
 
 Scientific Interpretation
 -------------------------
   Policy rankings are preserved under the lognormal distribution.
   RLInv's advantage over B1 holds in all scenarios.
   Under the evaluated lognormal lead-time setting (sigma=0.5), RLInv's learned inventory-aware ordering policy maintained and, in the extreme scenario, increased its advantage over rule-based B1.
-  Within the evaluated benchmark scenarios, replacing the memoryless geometric lead-time model with a matched-mean lognormal model did not materially alter the principal scientific conclusions..
+  Within the evaluated benchmark scenarios, replacing the memoryless geometric lead-time model with a matched-mean lognormal model did not materially alter the principal scientific conclusions.
 
 Recommendation
 --------------
