@@ -1,0 +1,60 @@
+
+======================================================================
+TANK CAPACITY SENSITIVITY SUMMARY
+======================================================================
+
+Objective
+---------
+Determine how RLInv's advantage over B1 varies with tank capacity,
+to empirically confirm that inventory coupling is the binding mechanism
+and to justify the RL methodology (addresses P2-R01).
+
+Setup
+-----
+Policies: RLInv (geometric-trained), B1
+Sites: site2, site5, site7 (Hard/Medium -- where signal lives)
+Scenario: delayed (mean lead time = 48h)
+Seeds: 10 (identical to main grid)
+Episodes: 10 per (site, tank, seed)
+Tank sizes: 24h / 48h / 72h (baseline) / 144h / 336h
+Rationale: anchored to mean delivery times of the four lead-time scenarios
+
+Key Results
+-----------
+    24h (x0.33): RLInv=215.55  B1=283.55  advantage=68.00 kWh
+    48h (x0.67): RLInv=42.88  B1=94.68  advantage=51.81 kWh
+    72h (x1.0): RLInv=11.95  B1=44.63  advantage=32.68 kWh
+   144h (x2.0): RLInv=0.00  B1=4.81  advantage=4.81 kWh
+   336h (x4.67): RLInv=0.00  B1=0.00  advantage=0.00 kWh
+
+Verdict
+-------
+  MONOTONE DECREASE
+
+Interpretation
+--------------
+  RLInv's advantage over B1 decreases monotonically as tank capacity grows from 24h to 336h under the delayed scenario.
+  This confirms that inventory coupling is the binding mechanism: as the buffer grows relative to the mean delivery time, the reactive B1 ordering policy becomes increasingly adequate and RLInv's learned anticipatory ordering provides diminishing marginal benefit.
+
+Reviewer Coverage
+-----------------
+  P2-R01: Impact of delay in inventory -- ADDRESSED (primary evidence)
+  P1-R (tank threshold): Does a larger buffer eliminate the advantage? -- ANSWERED
+
+Recommended Thesis Location
+---------------------------
+  Chapter 8, Section: 'Impact of Inventory Buffer on Policy Performance'
+  One figure: RLInv advantage (kWh) vs tank size (hours)
+  One paragraph: setup, result, interpretation
+
+Evidence Files
+--------------
+  Raw CSVs:      results\sensitivity\tank/
+  Summary CSV:   results\sensitivity\tank\tank_summary.csv
+  This file:     results\sensitivity\tank\tank_thesis_summary.txt
+
+Use this file to update:
+  - Stream B (reviewer closure): P2-R01 closed
+  - Stream C (experimental register): tank sensitivity experiment
+  - Stream D (discoveries): monotonicity finding
+  - Chapter 8 methodology justification subsection
