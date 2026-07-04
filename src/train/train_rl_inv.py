@@ -54,8 +54,12 @@ def mask_fn(env) -> np.ndarray:
 def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str,
              tank_scale: float = 1.0, use_time_encoding: bool = True,
              lead_distribution: str = "geometric",
+             lead_sigma: float = 0.5,
+             lead_k: float = 2.0,
              use_stochastic_grid: bool = False,
-             use_eta_obs: bool = False):
+             use_eta_obs: bool = False,
+             use_supplier_regime: bool = False,   # [CHANGE 11] RLInv-DA extension
+             use_ewma_lead: bool = False):         # [CHANGE 11] RLInv-DA extension
     def _init():
         df, params = load_site(site_csv)
         df_train, df_test = train_test_split(df)
@@ -77,8 +81,12 @@ def make_env(site_csv: str, seed: int, eval_mode: bool, lead_scenario: str,
             tank_scale=tank_scale,
             use_time_encoding=use_time_encoding,
             lead_distribution=lead_distribution,
+            lead_sigma=lead_sigma,
+            lead_k=lead_k,
             use_stochastic_grid=use_stochastic_grid,
             use_eta_obs=use_eta_obs,
+            use_supplier_regime=use_supplier_regime,
+            use_ewma_lead=use_ewma_lead,
         )
         env = Monitor(env)
         env = ActionMasker(env, mask_fn)
@@ -132,14 +140,22 @@ def main():
     ap.add_argument("--no_time_enc", action="store_true",
                     help="Disable time encoding ablation — zeros sin_h/cos_h in obs")
     ap.add_argument("--lead_dist",  type=str,   default="geometric",
-                    choices=["geometric", "lognormal"],
-                    help="Lead time distribution. lognormal samples at order placement.")
+                    choices=["geometric", "lognormal", "weibull"],
+                    help="Lead time distribution. lognormal/weibull samples at order placement.")
+    ap.add_argument("--lead_sigma", type=float, default=0.5,
+                    help="Lognormal sigma shape parameter (default 0.5, ignored for geometric)")
+    ap.add_argument("--lead_k",     type=float, default=2.0,
+                    help="Weibull shape parameter k (default 2.0, ignored for other dists)")
     ap.add_argument("--stochastic_grid", action="store_true",
                     help="Use 2-state Markov chain for grid outage (fitted from site data).")
     ap.add_argument("--use_eta_obs", action="store_true",
                     help="ETA-aware EXTENSION only: agent sees delivery_remaining_n. "
                          "Default False for all main experiments. "
                          "Only use with --lead_dist lognormal --tag lognormal_eta.")
+    ap.add_argument("--use_supplier_regime", action="store_true",
+                    help="[CHANGE 11] Two-state Markov supplier regime (RLInv-DA extension).")
+    ap.add_argument("--use_ewma_lead", action="store_true",
+                    help="[CHANGE 11] EWMA lead-time estimate as obs dim 12 (RLInv-DA extension).")
     args = ap.parse_args()
 
     os.makedirs(args.logdir, exist_ok=True)
@@ -178,8 +194,12 @@ def main():
                 "tank_scale":      args.tank_scale,
                 "use_time_enc":    not args.no_time_enc,
                 "lead_dist":       args.lead_dist,
+                "lead_sigma":      args.lead_sigma,
+                "lead_k":          args.lead_k,
                 "stochastic_grid": args.stochastic_grid,
                 "use_eta_obs":     args.use_eta_obs,
+                "use_supplier_regime": args.use_supplier_regime,
+                "use_ewma_lead":   args.use_ewma_lead,
                 "git_commit":      _get_git_commit(),
             })
 
@@ -192,8 +212,12 @@ def main():
                          tank_scale=args.tank_scale,
                          use_time_encoding=not args.no_time_enc,
                          lead_distribution=args.lead_dist,
+                         lead_sigma=args.lead_sigma,
+                         lead_k=args.lead_k,
                          use_stochastic_grid=args.stochastic_grid,
-                         use_eta_obs=args.use_eta_obs)
+                         use_eta_obs=args.use_eta_obs,
+                         use_supplier_regime=args.use_supplier_regime,
+                         use_ewma_lead=args.use_ewma_lead)
                 for i in range(n_envs)
             ])
             vec_env = VecNormalize(
@@ -207,8 +231,12 @@ def main():
                          tank_scale=args.tank_scale,
                          use_time_encoding=not args.no_time_enc,
                          lead_distribution=args.lead_dist,
+                         lead_sigma=args.lead_sigma,
+                         lead_k=args.lead_k,
                          use_stochastic_grid=args.stochastic_grid,
-                         use_eta_obs=args.use_eta_obs)
+                         use_eta_obs=args.use_eta_obs,
+                         use_supplier_regime=args.use_supplier_regime,
+                         use_ewma_lead=args.use_ewma_lead)
             ])
             eval_env = VecNormalize(
                 eval_env, norm_obs=True, norm_reward=False,

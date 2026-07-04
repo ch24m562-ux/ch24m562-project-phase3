@@ -283,7 +283,9 @@ def evaluate(
                 _trace_this = trace_out and (ep == 0) and (site == sites[0]) and (lead == leads[0])
                 _trace = {"inv_pct": [], "unmet_kwh": [], "dg_on": [],
                           "grid_avail": [], "soc": [],
-                          "pipe_pct": [], "order_kwh": []}
+                          "pipe_pct": [], "order_kwh": [],
+                          "supplier_disrupted": [], "ewma_lead_h": [],
+                          "delivery_in_hours": []}
                 while not (terminated or truncated):
                     a = _policy_act(policy, obs, env, site_id=site)
                     obs, r, terminated, truncated, info = env.step(a)
@@ -299,6 +301,10 @@ def evaluate(
                         tank = float(info.get("tank_cap_kwh", 1.0))
                         _trace["pipe_pct"].append(float(info.get("pending_qty_kwh", 0.0)) / max(tank, 1e-9))
                         _trace["order_kwh"].append(float(info.get("order_qty_kwh", 0.0)))
+                        # [CHANGE 11] RLInv-DA extension trace fields
+                        _trace["supplier_disrupted"].append(float(info.get("supplier_disrupted", 0.0)))
+                        _trace["ewma_lead_h"].append(float(info.get("ewma_lead_h", 0.0)))
+                        _trace["delivery_in_hours"].append(float(info.get("delivery_in_hours", -1.0)))
                 if _trace_this and trace_out:
                     os.makedirs(os.path.dirname(trace_out) or ".", exist_ok=True)
                     np.savez(trace_out, **{k: np.array(v) for k, v in _trace.items()})
@@ -436,6 +442,10 @@ if __name__ == "__main__":
                         help="Disable time encoding ablation")
     parser.add_argument("--use_eta_obs",  action="store_true",
                         help="ETA-aware extension: agent sees delivery_remaining_n")
+    parser.add_argument("--use_supplier_regime", action="store_true",
+                        help="[CHANGE 11] Two-state Markov supplier regime (RLInv-DA)")
+    parser.add_argument("--use_ewma_lead", action="store_true",
+                        help="[CHANGE 11] EWMA lead-time estimate as obs dim 12 (RLInv-DA)")
     # ── Metadata columns written into every CSV row ───────────────────────────
     parser.add_argument("--policy_label",    type=str, default="")
     parser.add_argument("--train_scenario",  type=str, default="normal",
@@ -572,6 +582,8 @@ if __name__ == "__main__":
                 lead_k=args.lead_k,
                 use_stochastic_grid=args.stochastic_grid,
                 use_eta_obs=args.use_eta_obs,
+                use_supplier_regime=args.use_supplier_regime,
+                use_ewma_lead=args.use_ewma_lead,
             )
             if args.env_type == "a5":
                 from env.obs_wrappers import NoInvObsWrapper

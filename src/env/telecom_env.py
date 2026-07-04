@@ -114,6 +114,12 @@ class TelecomEnv(gym.Env):
                                             # False (default): delivery_remaining_n=0
                                             # True: agent sees remaining delivery hours
                                             # ONLY use True for extension experiments
+        use_supplier_regime: bool = False,  # [CHANGE 11] Two-state Markov supplier
+        supplier_p_disrupt: float = 0.15,  # Normal→Disrupted per-order probability
+        supplier_p_recover: float = 0.30,  # Disrupted→Normal per-order probability
+        supplier_disrupt_scale: float = 2.0,# Disrupted mean = scale × normal mean
+        use_ewma_lead: bool = False,        # [CHANGE 11] EWMA lead-time obs (dim 12)
+        ewma_alpha: float = 0.3,           # EWMA smoothing factor (Brown 1959)
     ):
         super().__init__()
 
@@ -158,6 +164,19 @@ class TelecomEnv(gym.Env):
         # True:  agent sees remaining delivery hours (requires lognormal + vendor ETA)
         # Main thesis uses False. ETA-aware extension uses True.
         self.use_eta_obs = bool(use_eta_obs)
+
+        # ── [CHANGE 11] Supplier regime + EWMA delay tracking ────────────────
+        # Default (False): stationary lead times — all main thesis experiments unchanged
+        # True: two-state Markov supplier, for RLInv-DA exploratory extension only
+        self.use_supplier_regime    = bool(use_supplier_regime)
+        self.supplier_p_disrupt     = float(supplier_p_disrupt)
+        self.supplier_p_recover     = float(supplier_p_recover)
+        self.supplier_disrupt_scale = float(supplier_disrupt_scale)
+        self._supplier_disrupted    = False   # reset each episode
+
+        self.use_ewma_lead  = bool(use_ewma_lead)
+        self.ewma_alpha     = float(ewma_alpha)
+        self._ewma_lead_h   = 0.0   # initialised properly in reset()
 
         # ── [CHANGE 3] Validate lead_scenario — "multi" now allowed ──────────
         valid = list(self.LEAD_TIME_SCENARIOS.keys()) + [self.MULTI_SCENARIO]
@@ -220,8 +239,9 @@ class TelecomEnv(gym.Env):
 
         # ---- Gym spaces — [CHANGE 8] shape (10,) → (11,) for delivery_remaining_n
         # dim 11: 0.0 for geometric (memoryless), informative for lognormal
+        obs_dim = 12 if self.use_ewma_lead else 11  # [CHANGE 11] EWMA adds dim 12
         self.observation_space = spaces.Box(
-            low=-2.0, high=2.0, shape=(11,), dtype=np.float32
+            low=-2.0, high=2.0, shape=(obs_dim,), dtype=np.float32
         )
         self.action_space = spaces.Discrete(6)
 
@@ -336,6 +356,10 @@ class TelecomEnv(gym.Env):
         self._had_stockout_pending = False
         self._emergency_arrivals   = 0
 
+        # ── [CHANGE 11] Reset supplier state and EWMA estimator ──────────────
+        self._supplier_disrupted = False   # start each episode in normal state
+        self._ewma_lead_h = 1.0 / max(self.lead_p, 1e-9)  # init to scenario mean
+
         # ── [CHANGE 9] Initialise Markov grid state from stationary dist ──────
         if self.use_stochastic_grid:
             denom = self._p_outage + self._p_restore
@@ -408,6 +432,11 @@ class TelecomEnv(gym.Env):
                 self._inv_kwh      = self._inv_kwh + delivery_kwh
                 if self._had_stockout_pending:
                     self._emergency_arrivals += 1  # delivery arrived AFTER stockout
+                # [CHANGE 11] Update EWMA BEFORE resetting hours_since_order
+                if self.use_ewma_lead:
+                    realized_lead = self._hours_since_order
+                    self._ewma_lead_h = (self.ewma_alpha * realized_lead
+                                        + (1.0 - self.ewma_alpha) * self._ewma_lead_h)
                 self._pending_flag         = 0
                 self._pending_qty_kwh      = 0.0
                 self._hours_since_order    = 0.0
@@ -428,15 +457,26 @@ class TelecomEnv(gym.Env):
             self._pending_flag    = 1
             self._pending_qty_kwh = float(order_qty_kwh)
             self._hours_since_order = 0.0
+            # [CHANGE 11] Supplier regime transition at order placement
+            if self.use_supplier_regime:
+                if self._supplier_disrupted:
+                    if self.rng.random() < self.supplier_p_recover:
+                        self._supplier_disrupted = False
+                else:
+                    if self.rng.random() < self.supplier_p_disrupt:
+                        self._supplier_disrupted = True
             if self.lead_distribution == "lognormal":
-                # Sample delivery time so E[T] = 1/lead_p hours (matches geometric mean)
-                # Lognormal: E[X] = exp(mu + s²/2) = mean_hours → mu = ln(mean)-s²/2
                 mean_hours = 1.0 / max(self.lead_p, 1e-9)
+                # [CHANGE 11] Scale mean if supplier disrupted
+                if self.use_supplier_regime and self._supplier_disrupted:
+                    mean_hours = mean_hours * self.supplier_disrupt_scale
                 mu_log     = np.log(mean_hours) - 0.5 * self.lead_sigma ** 2
                 sampled    = float(self.rng.lognormal(mu_log, self.lead_sigma))
                 self._delivery_in_hours = max(1.0, sampled)  # at least 1h
             elif self.lead_distribution == "weibull":
                 mean_hours = 1.0 / max(self.lead_p, 1e-9)
+                if self.use_supplier_regime and self._supplier_disrupted:
+                    mean_hours = mean_hours * self.supplier_disrupt_scale
                 scale = mean_hours / math.gamma(1.0 + 1.0 / self.lead_k)
                 sampled = float(self.rng.weibull(self.lead_k) * scale)
                 self._delivery_in_hours = max(1.0, sampled)
@@ -487,6 +527,9 @@ class TelecomEnv(gym.Env):
             "hours_since_order":      self._hours_since_order,
             "emergency_arrival":      int(self._had_stockout_pending and delivery_kwh > 0),
             "cumul_emergency_arrivals": self._emergency_arrivals,
+            "supplier_disrupted":     int(self._supplier_disrupted),   # [CHANGE 11]
+            "ewma_lead_h":            float(self._ewma_lead_h),        # [CHANGE 11]
+            "delivery_in_hours":      float(self._delivery_in_hours),  # [CHANGE 11]
         }
 
         self.ep_rewards.append(float(reward))
@@ -683,6 +726,11 @@ class TelecomEnv(gym.Env):
             [soc_n, inv_n, p_flag, pqty_n, pv_n, load_n, grid,
              sin_h, cos_h, hours_n, delivery_rem_n],
             dtype=np.float32,
+        ) if not self.use_ewma_lead else np.array(
+            [soc_n, inv_n, p_flag, pqty_n, pv_n, load_n, grid,
+             sin_h, cos_h, hours_n, delivery_rem_n,
+             float(np.clip(self._ewma_lead_h / self.HOURS_ORDER_MAX, 0.0, 1.0))],
+            dtype=np.float32,
         )
 
     # ── Episode stats (UNCHANGED) ─────────────────────────────────────────────
@@ -713,6 +761,9 @@ class TelecomEnv(gym.Env):
             "lead_distribution": self.lead_distribution,
             "stochastic_grid":   self.use_stochastic_grid,
             "use_eta_obs":       self.use_eta_obs,
+            "supplier_disrupted": int(self._supplier_disrupted),   # [CHANGE 11] debug
+            "ewma_lead_h":       float(self._ewma_lead_h),         # [CHANGE 11] debug
+            "delivery_in_hours": float(self._delivery_in_hours),   # [CHANGE 11] debug
         }
 
     # ── Render (UNCHANGED) ────────────────────────────────────────────────────
