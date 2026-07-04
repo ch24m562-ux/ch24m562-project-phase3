@@ -33,6 +33,7 @@ from sb3_contrib import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
 import mlflow
 from callbacks import DetailedEvalCallback
+from mlflow_rollout_callback import MlflowRolloutCallback
 
 # ── All hyperparameters from hparams.yaml ─────────────────────────────────────
 from config_loader import ppo_cfg, policy_cfg, train_cfg, env_cfg, registry_cfg
@@ -255,7 +256,9 @@ def main():
 
             # ── Train ─────────────────────────────────────────────────────────
             start_time = datetime.now()
-            model.learn(total_timesteps=args.timesteps, callback=eval_cb)
+            #model.learn(total_timesteps=args.timesteps, callback=eval_cb)
+            rollout_cb = MlflowRolloutCallback()
+            model.learn(total_timesteps=args.timesteps, callback=[eval_cb, rollout_cb])
             wall_time_min = (datetime.now() - start_time).total_seconds() / 60
 
             # ── Save model + vecnorm ──────────────────────────────────────────

@@ -31,6 +31,7 @@ import pandas as pd
 import random
 
 import gymnasium as gym
+import math
 from gymnasium import spaces
 
 from config_loader import env_cfg, reward_cfg, lead_cfg, get_multi_scenario_pool
@@ -107,6 +108,7 @@ class TelecomEnv(gym.Env):
         use_time_encoding: bool = True,     # [CHANGE 6] False → zeros sin_h/cos_h
         lead_distribution: str = "geometric",  # [CHANGE 7] "geometric"|"lognormal"
         lead_sigma: float = 0.5,            # [CHANGE 7] lognormal shape parameter
+        lead_k: float = 2.0,           # Weibull shape parameter (ignored for other dists)
         use_stochastic_grid: bool = False,  # [CHANGE 9] Markov chain grid outage
         use_eta_obs: bool = False,          # [CHANGE 10] ETA-aware extension only
                                             # False (default): delivery_remaining_n=0
@@ -132,15 +134,17 @@ class TelecomEnv(gym.Env):
         self.use_time_encoding = bool(use_time_encoding)
 
         # ── [CHANGE 7] Lead time distribution ────────────────────────────────
-        _valid_dist = ("geometric", "lognormal")
+        _valid_dist = ("geometric", "lognormal", "weibull")
         if lead_distribution not in _valid_dist:
             raise ValueError(
                 f"lead_distribution must be one of {_valid_dist}, got '{lead_distribution}'"
             )
         self.lead_distribution = lead_distribution
         self.lead_sigma        = float(lead_sigma)
-
+        #if lead_distribution == "lognormal":
+        #    print(f"[TelecomEnv DEBUG] lead_distribution={lead_distribution}, lead_sigma={lead_sigma}")        
         # ── [CHANGE 9] Stochastic grid outage — 2-state Markov chain ─────────
+        self.lead_k = float(lead_k)
         self.use_stochastic_grid = bool(use_stochastic_grid)
         if self.use_stochastic_grid:
             self._p_outage, self._p_restore = self._fit_markov_chain()
@@ -393,7 +397,7 @@ class TelecomEnv(gym.Env):
         if self._pending_flag == 1:
             self._hours_since_order += 1.0
             # Determine if delivery arrives this step
-            if self.lead_distribution == "lognormal":
+            if self.lead_distribution in ("lognormal", "weibull"):
                 self._delivery_in_hours -= 1.0
                 arrived = self._delivery_in_hours <= 0.0
             else:  # geometric (default) — memoryless Bernoulli trial
@@ -431,6 +435,11 @@ class TelecomEnv(gym.Env):
                 mu_log     = np.log(mean_hours) - 0.5 * self.lead_sigma ** 2
                 sampled    = float(self.rng.lognormal(mu_log, self.lead_sigma))
                 self._delivery_in_hours = max(1.0, sampled)  # at least 1h
+            elif self.lead_distribution == "weibull":
+                mean_hours = 1.0 / max(self.lead_p, 1e-9)
+                scale = mean_hours / math.gamma(1.0 + 1.0 / self.lead_k)
+                sampled = float(self.rng.weibull(self.lead_k) * scale)
+                self._delivery_in_hours = max(1.0, sampled)
             else:
                 self._delivery_in_hours = -1.0  # geometric: no countdown needed
 
