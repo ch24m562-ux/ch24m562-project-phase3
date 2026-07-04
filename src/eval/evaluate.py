@@ -424,6 +424,8 @@ if __name__ == "__main__":
     parser.add_argument("--lead_dist",    type=str, default="geometric",
                         choices=["geometric", "lognormal"],
                         help="Lead time distribution")
+    parser.add_argument("--lead_sigma",   type=float, default=0.5,
+                        help="Lognormal sigma shape parameter (default 0.5)")
     parser.add_argument("--tank_scale",   type=float, default=1.0,
                         help="Tank capacity multiplier (1.0=72h base)")
     parser.add_argument("--stochastic_grid", action="store_true",
@@ -564,6 +566,7 @@ if __name__ == "__main__":
                 tank_scale=args.tank_scale,
                 use_time_encoding=not args.no_time_enc,
                 lead_distribution=args.lead_dist,
+                lead_sigma=args.lead_sigma,
                 use_stochastic_grid=args.stochastic_grid,
                 use_eta_obs=args.use_eta_obs,
             )
