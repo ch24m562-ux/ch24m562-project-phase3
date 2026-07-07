@@ -23,11 +23,13 @@ from pathlib import Path
 
 EV15_CSV  = Path("results/sensitivity/lognormal/lognormal_summary.csv")
 EV15B_CSV = Path("results/sensitivity/lognormal_sigma08/lognormal08_summary.csv")
+EV15C_CSV = Path("results/sensitivity/weibull_k2/weibull_k2_summary.csv")
 OUT_DIR   = Path("results/figures")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 ev15  = pd.read_csv(EV15_CSV)
 ev15b = pd.read_csv(EV15B_CSV)
+ev15c = pd.read_csv(EV15C_CSV) if EV15C_CSV.exists() else None
 
 SCENARIOS = ["normal", "delayed", "monsoon", "extreme"]
 SC_LABELS = ["Normal\n(24h)", "Delayed\n(48h)", "Monsoon\n(72h)", "Extreme\n(336h)"]
@@ -43,6 +45,7 @@ DIST = {
     "geo":   {"ls": "-",  "marker": "o", "ms": 7, "lw": 2.2},
     "log05": {"ls": "--", "marker": "s", "ms": 6, "lw": 1.8},
     "log08": {"ls": ":",  "marker": "^", "ms": 6, "lw": 1.8},
+    "weib":  {"ls": "-.", "marker": "D", "ms": 6, "lw": 1.8},
 }
 
 BG   = "#FAFAFA"
@@ -84,7 +87,13 @@ for policy, pp in POL.items():
         if len(ev15b[(ev15b.policy==policy) & (ev15b.scenario==sc)]) > 0
         else np.nan for sc in SCENARIOS]
 
-    for key, vals in [("geo", geo_vals), ("log05", log05_vals), ("log08", log08_vals)]:
+    weib_vals = [
+        ev15c[(ev15c.policy==policy) & (ev15c.scenario==sc)]["weib_EENS"].values[0]
+        if ev15c is not None and len(ev15c[(ev15c.policy==policy) & (ev15c.scenario==sc)]) > 0
+        else np.nan for sc in SCENARIOS]
+
+    for key, vals in [("geo", geo_vals), ("log05", log05_vals),
+                      ("log08", log08_vals), ("weib", weib_vals)]:
         d = DIST[key]
         ax.semilogy(x, [v + OFFSET for v in vals],
                     color=pp["color"], linestyle=d["ls"],
@@ -97,7 +106,7 @@ ax.set_xticklabels(SC_LABELS, fontsize=9.5)
 ax.set_xlim(-0.3, 3.3)
 ax.set_ylabel("Mean EENS (kWh, logarithmic scale)")
 ax.set_title("Distributional Robustness of Policy Performance Under Alternative Delivery-Time Distributions\n"
-             "Geometric (training), Lognormal (σ=0.5), and Lognormal (σ=0.8); scenario mean delivery times held constant",
+             "Geometric (training), Lognormal (σ=0.5), Lognormal (σ=0.8), and Weibull (k=2); scenario mean delivery times held constant",
              fontsize=10.5)
 
 # Y-axis ticks in original units
@@ -121,7 +130,8 @@ dist_handles = [
            label=lbl)
     for (key, d), lbl in zip(
         DIST.items(),
-        ["Geometric (training)", "Lognormal σ=0.5 (EV15)", "Lognormal σ=0.8 (EV15b)"])
+        ["Geometric (train)", "Lognormal (σ=0.5)",
+         "Lognormal (σ=0.8)", "Weibull (k=2)"])
 ]
 
 leg1 = ax.legend(handles=pol_handles, loc="upper left",
