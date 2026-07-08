@@ -1,0 +1,2 @@
+site,lead_scenario,episode,steps,init_inv_frac,EENS_kWh,outage_hours,uptime_pct,diesel_kWh,stockout_events,orders_placed,violations,mean_soc,mean_inv_pct,min_inv_pct,dg_on_fraction,grid_kWh,cost_proxy,policy,seed,train_scenario,experiment_tag,train_steps,init_low,init_high,episode_len
+site5,extreme,0,360,0.7643736291335781,292.81683999999996,46,87.2222,417.81332000000003,0,1,0,0.5744197124756335,0.2995276250597037,0.06881103715510005,0.6361111111111111,1705.3125714285716,1099.9383485714286,rlinv_da_ewma,42,normal,main,0,0.3,0.9,360

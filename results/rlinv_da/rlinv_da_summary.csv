@@ -1,5 +1,9 @@
 variant,scenario,EENS_mean,EENS_sem,EENS_ci95_lo,EENS_ci95_hi,diesel_mean,cost_mean,orders_mean,stockouts_mean
+base_regime,normal,0.0,0.0,0.0,0.0,579.0,1229.6,4.17,0.0
+ewma_regime,normal,0.0,0.0,0.0,0.0,579.0,1229.6,4.27,0.0
 base_regime,delayed,4.408,1.808,0.864,7.953,574.6,1225.2,3.96,0.0
 ewma_regime,delayed,3.779,1.861,0.132,7.427,575.2,1225.8,4.04,0.0
 base_regime,monsoon,20.297,5.141,10.22,30.374,558.7,1209.3,3.63,0.0
 ewma_regime,monsoon,23.111,5.482,12.366,33.855,555.9,1206.5,3.57,0.0
+base_regime,extreme,233.632,16.026,202.22,265.044,345.4,996.0,1.49,0.0
+ewma_regime,extreme,235.429,16.035,204.001,266.858,343.6,994.2,1.48,0.0

@@ -1,7 +1,13 @@
 site,lead_scenario,base_regime,ewma_regime,diff,direction
 site2,delayed,3.542,4.637,1.095,Base better
+site2,extreme,296.115,295.909,-0.206,EWMA better
 site2,monsoon,22.813,28.744,5.931,Base better
+site2,normal,0.0,0.0,0.0,Similar
 site5,delayed,7.183,4.873,-2.31,EWMA better
+site5,extreme,306.389,310.08,3.691,Base better
 site5,monsoon,31.59,34.281,2.691,Base better
+site5,normal,0.0,0.0,0.0,Similar
 site7,delayed,2.5,1.827,-0.673,EWMA better
+site7,extreme,98.391,100.299,1.908,Base better
 site7,monsoon,6.488,6.307,-0.181,EWMA better
+site7,normal,0.0,0.0,0.0,Similar
