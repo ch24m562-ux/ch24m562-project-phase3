@@ -1,0 +1,7 @@
+site,lead_scenario,base_regime,ewma_regime,diff,direction
+site2,delayed,3.542,4.637,1.095,Base better
+site2,monsoon,22.813,28.744,5.931,Base better
+site5,delayed,7.183,4.873,-2.31,EWMA better
+site5,monsoon,31.59,34.281,2.691,Base better
+site7,delayed,2.5,1.827,-0.673,EWMA better
+site7,monsoon,6.488,6.307,-0.181,EWMA better

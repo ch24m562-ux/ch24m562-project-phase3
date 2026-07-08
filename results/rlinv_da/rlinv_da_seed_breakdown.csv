@@ -1,0 +1,19 @@
+site,seed,lead_scenario,base_regime,ewma_regime,diff,direction
+site2,42,delayed,0.0,0.0,0.0,Similar
+site2,42,monsoon,0.0,0.0,0.0,Similar
+site2,123,delayed,0.832,0.832,0.0,Similar
+site2,123,monsoon,25.567,25.567,0.0,Similar
+site2,777,delayed,9.792,13.08,3.288,Base better
+site2,777,monsoon,42.873,60.665,17.792,Base better
+site5,42,delayed,0.0,0.0,0.0,Similar
+site5,42,monsoon,0.0,0.0,0.0,Similar
+site5,123,delayed,7.74,7.74,0.0,Similar
+site5,123,monsoon,36.8,37.522,0.722,Base better
+site5,777,delayed,13.809,6.88,-6.929,EWMA better
+site5,777,monsoon,57.971,65.322,7.351,Base better
+site7,42,delayed,0.0,0.0,0.0,Similar
+site7,42,monsoon,0.0,0.0,0.0,Similar
+site7,123,delayed,1.757,1.757,0.0,Similar
+site7,123,monsoon,3.208,4.038,0.83,Base better
+site7,777,delayed,5.743,3.723,-2.02,EWMA better
+site7,777,monsoon,16.257,14.882,-1.375,EWMA better
