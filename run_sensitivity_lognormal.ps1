@@ -84,6 +84,7 @@ foreach ($policy in $Policies) {
                             --seed         $seed `
                             --episode_len  360 `
                             --lead_dist    $LeadDist `
+                            --lead_sigma $LeadSigma `
                             --policy_label "rlinv_lognormal" `
                             --train_scenario normal `
                             --train_steps  400000 `
@@ -99,6 +100,7 @@ foreach ($policy in $Policies) {
                             --seed         $seed `
                             --episode_len  360 `
                             --lead_dist    $LeadDist `
+                            --lead_sigma $LeadSigma `
                             --policy_label "b1_lognormal" `
                             --train_scenario normal `
                             --experiment_tag "sensitivity_lognormal" `
@@ -113,6 +115,7 @@ foreach ($policy in $Policies) {
                             --seed         $seed `
                             --episode_len  360 `
                             --lead_dist    $LeadDist `
+                            --lead_sigma $LeadSigma `
                             --policy_label "mpc_lognormal" `
                             --train_scenario normal `
                             --experiment_tag "sensitivity_lognormal" `

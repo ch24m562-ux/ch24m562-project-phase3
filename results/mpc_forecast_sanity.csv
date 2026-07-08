@@ -1,0 +1,3 @@
+site,lead_scenario,episode,steps,init_inv_frac,EENS_kWh,outage_hours,uptime_pct,diesel_kWh,stockout_events,orders_placed,violations,mean_soc,mean_inv_pct,min_inv_pct,dg_on_fraction,grid_kWh,cost_proxy,policy,seed,train_scenario,experiment_tag,train_steps,init_low,init_high,episode_len
+site5,normal,0,360,0.7643736291335781,18.0032,3,99.1667,692.62696,0,2,0,0.5744197124756335,0.4263746143067768,0.08424544193365252,0.4083333333333333,1705.3125714285716,1374.7519885714287,mpc_forecast,42,normal,main,0,0.3,0.9,360
+site5,normal,1,360,0.6913795576205464,0.24319999999999956,1,99.7222,710.38696,0,2,0,0.5744197124756335,0.5248325930120518,0.23434437772562652,0.4222222222222222,1705.3125714285716,1392.5119885714287,mpc_forecast,42,normal,main,0,0.3,0.9,360

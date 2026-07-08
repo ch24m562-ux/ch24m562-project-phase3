@@ -1,0 +1,33 @@
+
+================================================================================
+FULL CROSS-SITE ANALYSIS — Inventory-Aware RL for Telecom Tower Management
+Sangeeta Gupta | CH24M562 | IIT Madras | Phase-II
+Scenarios: ['normal', 'delayed']  |  Threshold: 50.0 kWh  |  A5: True
+================================================================================
+
+================================================================================
+SECTION 1: DATA AUDIT
+================================================================================
+  Total rows (all scenarios) : 8,280
+  Rows after scenario filter : 8,280
+  Policies  : ['A5', 'A7', 'B0', 'B1', 'RLInv', 'TrackB']
+  Sites     : [np.int64(1), np.int64(2), np.int64(3), np.int64(4), np.int64(5), np.int64(6), np.int64(7), np.int64(8), np.int64(9), np.int64(10)]
+  Seeds     : [np.int64(42), np.int64(123), np.int64(777)]
+  Scenarios : ['delayed', 'normal']
+  Using     : ['normal', 'delayed']
+  NaN values: 0
+
+Traceback (most recent call last):
+  File "C:\Users\dasja\projects\myproj\analyze_results.py", line 585, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\dasja\projects\myproj\analyze_results.py", line 567, in main
+    audit(df_full, df)
+    ~~~~~^^^^^^^^^^^^^
+  File "C:\Users\dasja\projects\myproj\analyze_results.py", line 148, in audit
+    print("  Policy labels clean \u2713")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\dasja\miniconda3\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 22: character maps to <undefined>

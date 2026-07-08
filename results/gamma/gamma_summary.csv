@@ -1,0 +1,16 @@
+policy,lead_scenario,mean,std,count,sem,ci95_lo,ci95_hi
+gamma_0.95,delayed,0.0,0.0,90,0.0,0.0,0.0
+gamma_0.95,extreme,168.46,159.78,90,16.84,135.45,201.47
+gamma_0.95,monsoon,16.59,35.28,90,3.72,9.3,23.88
+gamma_0.95,normal,0.0,0.0,90,0.0,0.0,0.0
+gamma_0.99,delayed,0.0,0.0,90,0.0,0.0,0.0
+gamma_0.99,extreme,168.86,160.16,90,16.88,135.77,201.95
+gamma_0.99,monsoon,16.71,35.39,90,3.73,9.4,24.02
+gamma_0.99,normal,0.0,0.0,90,0.0,0.0,0.0
+gamma_0.995,delayed,0.5,4.78,90,0.5,-0.48,1.49
+gamma_0.995,extreme,168.45,159.78,90,16.84,135.44,201.46
+gamma_0.995,monsoon,18.99,41.9,90,4.42,10.33,27.64
+gamma_0.995,normal,0.0,0.0,90,0.0,0.0,0.0
+gamma_095,extreme,,,0,,,
+gamma_095,normal,,,0,,,
+gamma_0995,extreme,,,0,,,

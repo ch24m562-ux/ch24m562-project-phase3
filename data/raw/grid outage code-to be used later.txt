@@ -1,0 +1,25 @@
+The implementation for Phase 3 — 10 lines of code
+python# Step 1: fit from weekly template (done once per site)
+def fit_markov(week_template):
+    p = {}
+    for h in range(24):
+        # count transitions at this hour across all weeks
+        n00, n01, n10, n11 = count_transitions(week_template, hour=h)
+        p[h] = {
+            'stay_out': n00/(n00+n01),   # P(0→0 | hour=h)
+            'start_out': n10/(n10+n11),  # P(1→0 | hour=h)
+        }
+    return p
+
+# Step 2: sample a fresh episode every reset() (replaces tiling)
+def sample_grid_sequence(n_hours, p, seed):
+    rng = np.random.default_rng(seed)
+    state, seq = 1, []
+    for t in range(n_hours):
+        h = t % 24
+        seq.append(state)
+        if state == 0:
+            state = 0 if rng.random() < p[h]['stay_out'] else 1
+        else:
+            state = 1 if rng.random() > p[h]['start_out'] else 0
+    return seq
