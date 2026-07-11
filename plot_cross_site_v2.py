@@ -56,7 +56,7 @@ for b, vals in [(b1, piv["rlinv"]), (b2, piv["b1"])]:
                     f"{v:.2f}", ha="center", va="bottom", fontsize=9, fontweight="bold")
 
 plt.tight_layout()
-plt.savefig(f"{OUT_DIR}/fig_cross_site_v2.png", dpi=200, bbox_inches="tight")
+plt.savefig(f"{OUT_DIR}/fig_cross_site.png", dpi=200, bbox_inches="tight")
 plt.close()
-print("Saved fig_cross_site_v2.png")
+print("Saved fig_cross_site.png")
 print(piv.round(2))
