@@ -178,7 +178,7 @@ fig.text(0.5, 0.01,
     "The trajectory plot is presented to explain policy behaviour rather than to establish "
     "statistical significance. Statistical conclusions are drawn from the multi-seed "
     "sensitivity and robustness analyses presented in the preceding sections.",
-    ha="center", fontsize=8.5, color="#555555", style="italic")
+    ha="center", fontsize=9.5, color="#555555", style="italic")
 
 plt.tight_layout(rect=[0, 0.05, 1, 0.97])
 

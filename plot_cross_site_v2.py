@@ -20,6 +20,11 @@ MASTER_CSV = "results/phase3/master_summary.csv"
 CLASS_CSV = "data/processed/site_classification.csv"
 OUT_DIR = "results/figures"
 
+plt.rcParams.update({
+    "font.family": "serif", "font.size": 12,
+    "axes.spines.top": False, "axes.spines.right": False,
+})
+
 df = pd.read_csv(MASTER_CSV)
 cls = pd.read_csv(CLASS_CSV).set_index("site")["difficulty"].to_dict()
 
@@ -32,28 +37,28 @@ piv = piv.reindex(site_order)
 
 COLOR = {"Easy": "#4dac26", "Medium": "#d9a441", "Hard": "#d6604d"}
 
-fig, ax = plt.subplots(figsize=(13, 6))
+fig, ax = plt.subplots(figsize=(12, 7.2))
 x = np.arange(len(site_order))
 w = 0.38
 b1 = ax.bar(x - w/2, piv["rlinv"], w, color="#2166ac", label="RLInv (proposed)")
 b2 = ax.bar(x + w/2, piv["b1"], w, color="#4dac26", label="B1 (best baseline)")
 
 ax.set_xticks(x)
-labels = ax.set_xticklabels(site_order, fontweight="bold")
+labels = ax.set_xticklabels(site_order, fontweight="bold", fontsize=13)
 for lbl, site in zip(labels, site_order):
     lbl.set_color(COLOR.get(cls.get(site, "Medium"), "black"))
 
-ax.set_ylabel("Mean EENS (kWh / episode)")
+ax.set_ylabel("Mean EENS (kWh / episode)", fontsize=12.5)
 ax.set_title("Cross-Site Robustness: RLInv vs B1 (normal logistics)\n"
              "X-axis colour: green=Easy, orange=Medium, red=Hard",
-             fontsize=13, fontweight="bold")
-ax.legend(fontsize=11)
+             fontsize=14.5, fontweight="bold")
+ax.legend(fontsize=12.5)
 
 for b, vals in [(b1, piv["rlinv"]), (b2, piv["b1"])]:
     for rect, v in zip(b, vals):
         if v > 0.005:
             ax.text(rect.get_x() + rect.get_width()/2, rect.get_height(),
-                    f"{v:.2f}", ha="center", va="bottom", fontsize=9, fontweight="bold")
+                    f"{v:.2f}", ha="center", va="bottom", fontsize=11, fontweight="bold")
 
 plt.tight_layout()
 plt.savefig(f"{OUT_DIR}/fig_cross_site.png", dpi=200, bbox_inches="tight")

@@ -74,13 +74,13 @@ GRID   = "#EEEEEE"
 
 plt.rcParams.update({
     "font.family":        "serif",
-    "font.size":          10,
+    "font.size":          11.5,
     "axes.spines.top":    False,
     "axes.spines.right":  False,
-    "axes.labelsize":     10,
-    "legend.fontsize":    9,
-    "xtick.labelsize":    8.5,
-    "ytick.labelsize":    9,
+    "axes.labelsize":     11.5,
+    "legend.fontsize":    10.5,
+    "xtick.labelsize":    10,
+    "ytick.labelsize":    10.5,
 })
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.5),
@@ -139,7 +139,7 @@ ax1.errorbar(x_positions, bar_heights, yerr=bar_cis,
 # Value labels on bars
 for xp, h, ci in zip(x_positions, bar_heights, bar_cis):
     ax1.text(xp, h + ci + 0.4, f"{h:.1f}", ha="center",
-             fontsize=7.5, color="#333333")
+             fontsize=8.5, color="#333333")
 
 # B1 baseline reference line
 ax1.axhline(B1_MONSOON, color=ORANGE, linestyle="--", linewidth=1.8,
@@ -155,7 +155,7 @@ ax1.fill_between([-0.5, max(x_positions)+0.5], 0, B1_MONSOON,
 
 # Group separator lines and labels -- moved lower with box to avoid overlap
 for i, (gc, gl) in enumerate(zip(group_centers, group_labels)):
-    ax1.text(gc, -8, gl, ha="center", va="top", fontsize=9.5,
+    ax1.text(gc, -8, gl, ha="center", va="top", fontsize=11,
              color="#333333", fontweight="bold",
              bbox=dict(boxstyle="round,pad=0.2", facecolor="#F0F0F0",
                        edgecolor="#CCCCCC", linewidth=0.5))
@@ -187,13 +187,13 @@ x_idx = 0
 for group_name, variants in GROUPS.items():
     for label, variant, val, shade in variants:
         ax1.text(x_positions[x_idx], -1.5, param_labels.get(variant, ""),
-                 ha="center", va="top", fontsize=7.5, color="#555555")
+                 ha="center", va="top", fontsize=8.5, color="#555555")
         x_idx += 1
 ax1.set_ylabel("Mean EENS (kWh), hard sites\nMonsoon scenario")
 ax1.set_title("(a)  Reward Weight Robustness — Monsoon Scenario\n"
               "All variants evaluated on hard sites (site2/5/7), "
               "3 seeds × 400k training steps",
-              fontsize=10)
+              fontsize=11.5)
 ax1.legend(loc="upper right", framealpha=0.9,
            frameon=True).get_frame().set_linewidth(0)
 
@@ -201,7 +201,7 @@ ax1.legend(loc="upper right", framealpha=0.9,
 ax1.text(0.01, 0.97,
          "Error bars show 95% CI across sites and seeds.\n"
          "Large CI reflects site heterogeneity, not instability.",
-         transform=ax1.transAxes, fontsize=7.5, va="top",
+         transform=ax1.transAxes, fontsize=8.5, va="top",
          color="#777777", style="italic")
 
 # Annotation: robustness statement
@@ -233,16 +233,16 @@ bars2 = ax2.bar([0, 1], bar_display, width=0.5,
 
 # Value labels above bars
 ax2.text(0, gamma_eens[0] + 0.015, "0.319", ha="center",
-         fontsize=9.5, color="#333333", fontweight="bold")
+         fontsize=11, color="#333333", fontweight="bold")
 ax2.text(1, MIN_BAR + 0.015, "0.000\n(EENS = 0)", ha="center",
          fontsize=9, color="#333333", fontweight="bold")
 
 # Horizon annotations inside bars
 ax2.text(0, 0.10, "Myopic:\n< 1 delivery\ncycle\n(horizon ~20h)",
-         ha="center", fontsize=7.5, color="white", style="italic",
+         ha="center", fontsize=8.5, color="white", style="italic",
          fontweight="bold")
 ax2.text(1, MIN_BAR / 2, "EENS=0\n(~200h)",
-         ha="center", va="center", fontsize=7.5, color="white",
+         ha="center", va="center", fontsize=8.5, color="white",
          fontweight="bold")
 
 ax2.set_xticks([0, 1])
@@ -250,7 +250,7 @@ ax2.set_xticklabels(gamma_labels, fontsize=9)
 ax2.set_ylim(0, 0.45)
 ax2.set_ylabel("Mean EENS (kWh)")
 ax2.set_title("(b)  Discount Factor γ\nPlanning horizon validation",
-              fontsize=10)
+              fontsize=11.5)
 
 plt.tight_layout()
 

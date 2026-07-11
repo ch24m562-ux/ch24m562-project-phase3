@@ -53,13 +53,13 @@ GRID = "#EEEEEE"
 
 plt.rcParams.update({
     "font.family":        "serif",
-    "font.size":          10,
+    "font.size":          11,
     "axes.spines.top":    False,
     "axes.spines.right":  False,
-    "axes.labelsize":     11,
-    "legend.fontsize":    9,
-    "xtick.labelsize":    9.5,
-    "ytick.labelsize":    9,
+    "axes.labelsize":     12,
+    "legend.fontsize":    10,
+    "xtick.labelsize":    10.5,
+    "ytick.labelsize":    10,
 })
 
 fig, ax = plt.subplots(figsize=(10, 5.5))
@@ -102,12 +102,12 @@ for policy, pp in POL.items():
                     label="_nolegend_")
 
 ax.set_xticks(x)
-ax.set_xticklabels(SC_LABELS, fontsize=9.5)
+ax.set_xticklabels(SC_LABELS, fontsize=10.5)
 ax.set_xlim(-0.3, 3.3)
 ax.set_ylabel("Mean EENS (kWh, logarithmic scale)")
 ax.set_title("Distributional Robustness of Policy Performance Under Alternative Delivery-Time Distributions\n"
              "Geometric (training), Lognormal (σ=0.5), Lognormal (σ=0.8), and Weibull (k=2); scenario mean delivery times held constant",
-             fontsize=10.5)
+             fontsize=12, fontweight="bold")
 
 # Y-axis ticks in original units
 yticks = [0.3, 1, 2, 5, 10, 20, 50, 100]
@@ -136,13 +136,13 @@ dist_handles = [
 
 leg1 = ax.legend(handles=pol_handles, loc="upper left",
                  title="Policy", framealpha=0.9,
-                 frameon=True, fontsize=9)
+                 frameon=True, fontsize=10)
 leg1.get_frame().set_linewidth(0)
 ax.add_artist(leg1)
 
 leg2 = ax.legend(handles=dist_handles, loc="upper center",
                  title="Distribution", framealpha=0.9,
-                 frameon=True, fontsize=9)
+                 frameon=True, fontsize=10)
 leg2.get_frame().set_linewidth(0)
 
 # Annotation -- larger font, precise scientific wording
