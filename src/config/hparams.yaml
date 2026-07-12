@@ -137,7 +137,13 @@ training:
 
 # ── Evaluation ───────────────────────────────────────────────
 evaluation:
-  n_episodes: 30                 # episodes per seed at evaluation
+  n_episodes: 10                  # episodes per seed at evaluation
+                                   # (was 30 in an earlier draft of this config;
+                                   #  every reported result in the thesis uses n=10,
+                                   #  verified directly from master_summary.csv row counts
+                                   #  -- 10 sites x 10 seeds x 4 scenarios x 10 episodes = 4000
+                                   #  rows per policy. This value never matched what was
+                                   #  actually run; corrected here for future reproducibility.)
   scenarios_to_eval:             # evaluate every trained policy on all these
     - "normal"
     - "delayed"
