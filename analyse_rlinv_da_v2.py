@@ -109,10 +109,20 @@ BG, BLUE, GREY = "#FAFAFA", "#0072B2", "#888888"
 fig, axes = plt.subplots(2,2,figsize=(11,8))
 axes_flat = axes.flatten()
 fig.patch.set_facecolor(BG)
+# FIX: previously used a single 3-line suptitle() with the third line as raw
+# mathtext (r"$\it{...}$" with escaped hyphens/spaces). Mathtext's bounding-box
+# calculation for that string was oversized relative to what actually renders,
+# and tight_layout() has no built-in awareness of suptitle() at all -- so it
+# reserved no space for it, leaving a large blank gap above the plotted area.
+# Fix: split into a plain-text bold suptitle (2 lines) plus a separate fig.text()
+# call for the italic caption line (plain italic, no mathtext), and pass an
+# explicit rect to tight_layout() to reserve room for both at a known height.
 fig.suptitle("Exploratory Delay-Aware Inventory Extension\n"
-             "Performance under Persistent Supplier Regimes\n"
-             r"$\it{Reviewer\text{-}motivated\ exploratory\ extension\ (not\ part\ of\ the\ primary\ RLInv\ architecture)}$",
-             fontsize=10.5, fontweight="bold")
+             "Performance under Persistent Supplier Regimes",
+             fontsize=10.5, fontweight="bold", y=0.985)
+fig.text(0.5, 0.905,
+          "Reviewer-motivated exploratory extension (not part of the primary RLInv architecture)",
+          ha="center", fontsize=9, style="italic", color="#333333")
 
 for ax_idx, sc in enumerate(SCENARIOS):
     ax = axes_flat[ax_idx]
@@ -129,7 +139,15 @@ for ax_idx, sc in enumerate(SCENARIOS):
     ax.errorbar(x, means, yerr=errs, fmt="none", color="#333333",
                 capsize=4, linewidth=1.2, zorder=4)
     for xi,(m,e) in enumerate(zip(means,errs)):
-        ax.text(xi, m+e+0.3, f"{m:.2f}", ha="center", fontsize=9,
+        # FIX: previous code used a fixed +0.3 offset regardless of this
+        # subplot's own scale. For the Normal panel (both bars ~0.00, near-
+        # zero error bars), that placed the label at data-y=0.3, forcing
+        # autoscale to stretch the axis to include it -- squashing the
+        # actual near-zero bars/gridlines into a sliver and leaving a large
+        # blank gap above them. Scale the offset to each panel's own range.
+        panel_max = max(max(means), 0.01)
+        offset = panel_max * 0.03
+        ax.text(xi, m+e+offset, f"{m:.2f}", ha="center", fontsize=9,
                 fontweight="bold", color="#333333")
     ax.set_xticks(x)
     ax.set_xticklabels(["Base\n(no EWMA)","RLInv-DA\n(EWMA, α=0.3)"], fontsize=9)
@@ -140,7 +158,7 @@ for ax_idx, sc in enumerate(SCENARIOS):
 
 
 
-plt.tight_layout()
+plt.subplots_adjust(top=0.84, bottom=0.08, hspace=0.45, wspace=0.25)
 for ext in ["pdf","png"]:
     out = FIG_DIR/f"fig_rlinv_da.{ext}"
     plt.savefig(out, dpi=150, bbox_inches="tight", facecolor=BG)

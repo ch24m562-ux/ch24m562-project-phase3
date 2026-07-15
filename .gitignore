@@ -64,3 +64,10 @@ Main_Anchor*.pdf
 # reviewer_comment3_reward_justification.md
 # analyse_rlinv_da_v2.py, check_*.py, plot_*.py  <-- all your analysis scripts
 # traces/                     <-- root-level traces folder, same reproducibility rationale
+
+check_*.csv
+check_*.npz
+test_*.csv
+runs_*.txt
+phase3_*_tree.txt
+test.py

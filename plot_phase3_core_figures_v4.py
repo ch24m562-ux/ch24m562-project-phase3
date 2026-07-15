@@ -14,6 +14,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle, Patch
 from scipy import stats
 
 IN_CSV = "results/phase3/master_summary.csv"
@@ -50,39 +51,200 @@ plt.rcParams.update({
 # FIG 1 — Overall Policy Performance Across Delivery Scenarios
 # ═══════════════════════════════════════════════════════════════════════
 POLICY_ORDER = ["b0", "b1", "mpc", "trackb", "oracle_mpc", "rlinv"]
-POLICY_LABEL = {"b0": "B0", "b1": "B1", "mpc": "MPC", "trackb": "TrackB",
-                 "oracle_mpc": "Oracle-MPC", "rlinv": "RLInv"}
 
-fig, axes = plt.subplots(1, 4, figsize=(16, 5.6), sharey=False)
+POLICY_LABEL = {
+    "b0": "B0",
+    "b1": "B1",
+    "mpc": "MPC",
+    "trackb": "TrackB",
+    "oracle_mpc": "Oracle-MPC",
+    "rlinv": "RLInv",
+}
+
+POLICY_DESC = {
+    "b0": "B0 (threshold rule)",
+    "b1": "B1 ($(s,S)$ + rule dispatch)",
+    "mpc": "MPC ($H=24$, persistence)",
+    "trackb": "TrackB ($(s,S)$ + learned dispatch)",
+    "oracle_mpc": "Oracle-MPC (perfect forecast)",
+    "rlinv": "RLInv (proposed, joint learning)",
+}
+
+BANNER = {
+    "normal": "#cfe0f3",
+    "delayed": "#fbe0c4",
+    "monsoon": "#d3e8cf",
+    "extreme": "#f2cfcf",
+}
+
+YLIMS = {
+    "normal": (0, 14),
+    "delayed": (0, 35),
+    "monsoon": (0, 225),
+    "extreme": (0, 200),
+}
+
+fig, axes = plt.subplots(
+    1, 4,
+    figsize=(20, 7.3),
+    sharey=False
+)
+
 for ax, scen in zip(axes, SCEN_ORDER):
-    sub_all = df[df.lead_scenario == scen]
-    means, los, his = [], [], []
+    sub_all = df[df["lead_scenario"] == scen]
+
+    means, lower_err, upper_err = [], [], []
+
     for pol in POLICY_ORDER:
-        sm = seed_means(sub_all[sub_all.policy == pol])
-        m, lo, hi = ci95(sm.values)
-        means.append(m); los.append(m - lo); his.append(hi - m)
+        sm = seed_means(sub_all[sub_all["policy"] == pol])
+        mean, lo, hi = ci95(sm.values)
+
+        means.append(mean)
+        lower_err.append(mean - lo)
+        upper_err.append(hi - mean)
+
     x = np.arange(len(POLICY_ORDER))
     colors = [C[p] for p in POLICY_ORDER]
-    bars = ax.bar(x, means, yerr=[los, his], capsize=4, color=colors, alpha=0.88)
-    for b, p in zip(bars, POLICY_ORDER):
-        if p == "oracle_mpc":
-            b.set_hatch("//"); b.set_edgecolor("black")
+
+    ax.yaxis.grid(
+        True,
+        linestyle="--",
+        linewidth=0.6,
+        color="#cccccc",
+        alpha=0.75,
+        zorder=0,
+    )
+    ax.set_axisbelow(True)
+
+    bars = ax.bar(
+        x,
+        means,
+        width=0.72,
+        yerr=[lower_err, upper_err],
+        capsize=4,
+        color=colors,
+        alpha=0.90,
+        zorder=3,
+    )
+
+    for bar, policy in zip(bars, POLICY_ORDER):
+        if policy == "oracle_mpc":
+            bar.set_hatch("//")
+            bar.set_edgecolor("black")
+            bar.set_linewidth(0.8)
+
+    # Rotated labels prevent overlap
     ax.set_xticks(x)
-    ax.set_xticklabels([POLICY_LABEL[p] for p in POLICY_ORDER], fontsize=10.5)
-    ax.set_title(SCEN_LABEL[scen], fontsize=12, fontweight="bold")
+    ax.set_xticklabels(
+        [POLICY_LABEL[p] for p in POLICY_ORDER],
+        rotation=38,
+        ha="right",
+        rotation_mode="anchor",
+        fontsize=10.5,
+    )
+    ax.tick_params(axis="x", pad=3)
+    ax.tick_params(axis="y", labelsize=10.5)
+
+    ax.set_ylim(*YLIMS[scen])
+
     if scen == "normal":
         ax.set_ylabel("Mean EENS (kWh / episode)", fontsize=12)
-    for b, m in zip(bars, means):
-        ax.text(b.get_x() + b.get_width()/2, b.get_height(), f"{m:.2f}",
-                 ha="center", va="bottom", fontsize=9)
 
-fig.suptitle("Overall Policy Performance Across Delivery Scenarios\n"
-             "10 sites × 10 seeds (n=100 per bar); 95% CI shown",
-             fontsize=15, fontweight="bold")
-plt.tight_layout(rect=[0, 0, 1, 0.90])
-plt.savefig(f"{OUT_DIR}/fig_eens_comparison_v3.png", dpi=200, bbox_inches="tight")
+    # Full-width scenario banner
+    ax.add_patch(
+        Rectangle(
+            (0, 1.025),
+            1,
+            0.095,
+            transform=ax.transAxes,
+            facecolor=BANNER[scen],
+            edgecolor="#777777",
+            linewidth=0.8,
+            clip_on=False,
+        )
+    )
+    ax.text(
+        0.5,
+        1.072,
+        SCEN_LABEL[scen],
+        transform=ax.transAxes,
+        ha="center",
+        va="center",
+        fontsize=13,
+        fontweight="bold",
+    )
+
+    # Mean-value labels
+    yrange = YLIMS[scen][1] - YLIMS[scen][0]
+    for bar, mean in zip(bars, means):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            mean + 0.008 * yrange,
+            f"{mean:.2f}",
+            ha="center",
+            va="bottom",
+            fontsize=9.5,
+            zorder=4,
+        )
+
+fig.suptitle(
+    "Overall Policy Performance Across Delivery Scenarios\n"
+    "10 sites × 10 seeds ($n=100$ per bar); 95% CI shown",
+    fontsize=16,
+    fontweight="bold",
+    y=0.985,
+)
+
+legend_handles = []
+for policy in POLICY_ORDER:
+    legend_handles.append(
+        Patch(
+            facecolor=C[policy],
+            alpha=0.90,
+            hatch="//" if policy == "oracle_mpc" else None,
+            edgecolor="black" if policy == "oracle_mpc" else "none",
+            label=POLICY_DESC[policy],
+        )
+    )
+
+# Two rows are more readable in an A4 thesis than six tiny entries in one row
+fig.legend(
+    handles=legend_handles,
+    loc="lower center",
+    ncol=3,
+    fontsize=10,
+    frameon=False,
+    bbox_to_anchor=(0.5, 0.055),
+    columnspacing=1.8,
+    handlelength=2.2,
+)
+
+fig.text(
+    0.5,
+    0.018,
+    "Lower is better. Error bars show 95% confidence intervals over "
+    "100 paired site--seed comparisons ($n=100$ per bar).",
+    ha="center",
+    fontsize=9.5,
+    color="#444444",
+)
+
+# Do not use tight_layout here; manual spacing is more predictable
+fig.subplots_adjust(
+    left=0.055,
+    right=0.985,
+    top=0.76,
+    bottom=0.27,
+    wspace=0.22,
+)
+
+plt.savefig(
+    f"{OUT_DIR}/fig_eens_comparison_v4.png",
+    dpi=300,
+    bbox_inches="tight",
+)
 plt.close()
-print("Saved fig_eens_comparison_v3.png")
+print("Saved fig_eens_comparison_v4.png")
 
 # ═══════════════════════════════════════════════════════════════════════
 # FIG 2 — H1: Contribution of Joint Inventory-Dispatch Learning
