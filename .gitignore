@@ -71,3 +71,5 @@ test_*.csv
 runs_*.txt
 phase3_*_tree.txt
 test.py
+
+demo_run_output*.csv
