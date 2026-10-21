@@ -7,7 +7,7 @@
 | **Protocol version** | **1.9 — audit record closed (design unchanged since 1.5)** |
 | **Frozen on** | 2026-10-21 |
 | **Amended** | **2026-10-22 — v1.8 historical simulator, dataset and reproducibility audit** (§1.4–1.8, §13, Appendices). Earlier design freeze retained; energy-audit script replaced with independently reconstructed checks.<br>**2026-10-22 — v1.9: repository G0 energy audit EXECUTED and PASSED (§1.4); ECG-1 dataset provenance RESOLVED (§1.9); role-based parameter table (§7.4b); battery claim discipline (§1.10).** |
-| **Git commit at freeze** | `<fill: git rev-parse --short HEAD>` |
+| **Git commit at freeze** | 86e9632 |
 | **Resubmission deadline** | 2026-11-11 |
 | **Experiment freeze target** | 2026-11-04 (revised from 28 Oct after late start) |
 
