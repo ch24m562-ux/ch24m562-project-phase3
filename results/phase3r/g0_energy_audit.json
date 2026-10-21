@@ -1,0 +1,311 @@
+{
+  "status": "PASS",
+  "audit_date_utc": "2026-10-21T20:26:36.223015+00:00",
+  "environment": "UNMODIFIED Phase 3 TelecomEnv",
+  "repository": "C:\\Users\\dasja\\projects\\myproj",
+  "file_hashes": {
+    "src\\env\\telecom_env.py": "e8052834f1e193e4b55ea5e3d25e7eef5b2133697875c1a93cd9dc5bfcbfea2b",
+    "src\\env\\data_loader.py": "72ff5492781c0d10cbe4df5a1a808c2300fd9e221440bcfdd690a28c6f2a42f4",
+    "src\\config_loader.py": "2d5909031aeabd65683f24e9fa2f63d22bd5a54621d0c2fa3bcff06b6246b2e1",
+    "src\\config\\hparams.yaml": "a4bafa809b891472f7cdb6a4a712b0ad9aec5a6ed2dbb481b35ac05ce0ff1a09",
+    "data\\processed\\site1.csv": "27a6ac7681a4a20e9f8950d1adc808313485a6adc5c75cf02395e8e2548647d8",
+    "data\\processed\\site2.csv": "f4dd09111c3bc12428ea06a151340428d8fc316e2674fea83ed8543ec3d135a2",
+    "data\\processed\\site3.csv": "91106a24544950cefb02adc848bca22b599899236326bc064075b88e506c72c0",
+    "data\\processed\\site4.csv": "58e0b0367e8c02f32542be095186f1fc4a688fa85ed3257fa1dbf8aab7e87893",
+    "data\\processed\\site5.csv": "27219806cc87d13a9261c3e5fd18601bb62048a82c2bd48ceb08d0ce93341c4a",
+    "data\\processed\\site6.csv": "dcaf98633304a26f46796c06254be9e934847250be6e17a4907cf4209b4d86d0",
+    "data\\processed\\site7.csv": "b825a2992189739ed2735f224eb0a7efca656b3106a39adfbe9c217082621ef0",
+    "data\\processed\\site8.csv": "9765565aa2b452a3b7325f19edb17eb6c2eb698221921f97e4eeec22f4c3fa9a",
+    "data\\processed\\site9.csv": "f0c3141dd218c8f0e770b00f19d52302f870df61eff15eb88bba3afd875d5b20",
+    "data\\processed\\site10.csv": "11c655e37b8e79343cdc3dbae5a0d06e2b6366d8cd3ed6667914d6e6807a5ed8"
+  },
+  "scope": {
+    "primary_sites": [
+      "site1",
+      "site3",
+      "site5"
+    ],
+    "curtailment_sites": [
+      "site1",
+      "site3",
+      "site5",
+      "site8"
+    ],
+    "scenarios": [
+      "normal",
+      "delayed",
+      "monsoon",
+      "extreme"
+    ],
+    "episodes_per_cell": 3,
+    "primary_steps": 12960,
+    "curtailment_sweep_steps": 17280
+  },
+  "max_load_error": 1.7763568394002505e-15,
+  "max_source_error": 1.7763568394002505e-15,
+  "max_soc_error": 0.0,
+  "max_inventory_error": 0.0,
+  "curtailment_fraction_sweep": 0.16458333333333333,
+  "curtailment_fraction_site8": 0.3527777777777778,
+  "max_curtailment_kWh": 14.478,
+  "stockouts_in_test_trajectories": 0,
+  "soc_clip_events": 0,
+  "tank_overflow_events": 0,
+  "examples": {
+    "fully_served": {
+      "load": 9.12,
+      "unmet": 0.0,
+      "pv": 0.0,
+      "grid_total": 12.0,
+      "dg": 0.0,
+      "battery_net": 2.880000000000001,
+      "curtailment": 0.0
+    },
+    "excess_PV": {
+      "load": 8.79,
+      "unmet": 0.0,
+      "pv": 11.892,
+      "grid_total": 0.0,
+      "dg": 0.0,
+      "battery_net": 3.1020000000000003,
+      "curtailment": 0.0
+    },
+    "supply_shortage": {
+      "load": 8.62,
+      "unmet": 3.2302400000000024,
+      "pv": 2.458,
+      "grid_total": 0.0,
+      "dg": 0.0,
+      "battery_net": -2.9317599999999966,
+      "curtailment": 0.0
+    }
+  },
+  "tank_comparison": [
+    {
+      "site": "site1",
+      "tank_train_kwh_eq": 329.76,
+      "tank_test_kwh_eq": 320.402,
+      "test_minus_train_pct": -2.837821
+    },
+    {
+      "site": "site2",
+      "tank_train_kwh_eq": 695.406,
+      "tank_test_kwh_eq": 694.668,
+      "test_minus_train_pct": -0.106125
+    },
+    {
+      "site": "site3",
+      "tank_train_kwh_eq": 427.953333,
+      "tank_test_kwh_eq": 409.48,
+      "test_minus_train_pct": -4.31667
+    },
+    {
+      "site": "site4",
+      "tank_train_kwh_eq": 686.103333,
+      "tank_test_kwh_eq": 694.218,
+      "test_minus_train_pct": 1.182718
+    },
+    {
+      "site": "site5",
+      "tank_train_kwh_eq": 598.940667,
+      "tank_test_kwh_eq": 600.684,
+      "test_minus_train_pct": 0.291069
+    },
+    {
+      "site": "site6",
+      "tank_train_kwh_eq": 305.197333,
+      "tank_test_kwh_eq": 306.838,
+      "test_minus_train_pct": 0.537576
+    },
+    {
+      "site": "site7",
+      "tank_train_kwh_eq": 305.527333,
+      "tank_test_kwh_eq": 306.06,
+      "test_minus_train_pct": 0.174343
+    },
+    {
+      "site": "site8",
+      "tank_train_kwh_eq": 156.53,
+      "tank_test_kwh_eq": 145.678,
+      "test_minus_train_pct": -6.932856
+    },
+    {
+      "site": "site9",
+      "tank_train_kwh_eq": 299.801333,
+      "tank_test_kwh_eq": 297.64,
+      "test_minus_train_pct": -0.720922
+    },
+    {
+      "site": "site10",
+      "tank_train_kwh_eq": 294.266,
+      "tank_test_kwh_eq": 292.258,
+      "test_minus_train_pct": -0.682376
+    }
+  ],
+  "historical_summary": {
+    "source": "C:\\Users\\dasja\\projects\\myproj\\results\\phase3\\master_summary.csv",
+    "sha256": "d6489f1dd4d9a0341f08dff352170dd5248a4e17cbbecc20712c78ea1d346489",
+    "episode_rows": 44000,
+    "policies": [
+      "a5",
+      "a6",
+      "a7",
+      "b0",
+      "b1",
+      "mpc",
+      "mpc_forecast",
+      "multi",
+      "oracle_mpc",
+      "rlinv",
+      "trackb"
+    ],
+    "scenarios": [
+      "delayed",
+      "extreme",
+      "monsoon",
+      "normal"
+    ],
+    "stockout_events": 0,
+    "violation_events": 0,
+    "seeds_by_policy": {
+      "a5": [
+        7,
+        13,
+        21,
+        42,
+        99,
+        123,
+        314,
+        500,
+        777,
+        999
+      ],
+      "a6": [
+        7,
+        13,
+        21,
+        42,
+        99,
+        123,
+        314,
+        500,
+        777,
+        999
+      ],
+      "a7": [
+        7,
+        13,
+        21,
+        42,
+        99,
+        123,
+        314,
+        500,
+        777,
+        999
+      ],
+      "b0": [
+        7,
+        13,
+        21,
+        42,
+        99,
+        123,
+        314,
+        500,
+        777,
+        999
+      ],
+      "b1": [
+        7,
+        13,
+        21,
+        42,
+        99,
+        123,
+        314,
+        500,
+        777,
+        999
+      ],
+      "mpc": [
+        7,
+        13,
+        21,
+        42,
+        99,
+        123,
+        314,
+        500,
+        777,
+        999
+      ],
+      "mpc_forecast": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        42,
+        123,
+        777
+      ],
+      "multi": [
+        7,
+        13,
+        21,
+        42,
+        99,
+        123,
+        314,
+        500,
+        777,
+        999
+      ],
+      "oracle_mpc": [
+        7,
+        13,
+        21,
+        42,
+        99,
+        123,
+        314,
+        500,
+        777,
+        999
+      ],
+      "rlinv": [
+        7,
+        13,
+        21,
+        42,
+        99,
+        123,
+        314,
+        500,
+        777,
+        999
+      ],
+      "trackb": [
+        7,
+        13,
+        21,
+        42,
+        99,
+        123,
+        314,
+        500,
+        777,
+        999
+      ]
+    }
+  },
+  "limits": [
+    "Tests energy-ledger consistency for the historical implementation only; does not validate source battery coefficient semantics.",
+    "Checks randomly selected feasible actions, not policy-optimality or all possible action sequences.",
+    "Does not reproduce historical RL policy checkpoints; separate G0 checkpoint replay required.",
+    "Physical tank size and reward d_bar are derived independently from train/test slices as in original code."
+  ]
+}
