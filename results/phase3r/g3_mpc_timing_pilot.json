@@ -1,0 +1,49 @@
+{
+  "status": "OK",
+  "date_utc": "2026-10-21T21:13:25.775122+00:00",
+  "repository": "C:\\Users\\dasja\\projects\\myproj",
+  "full_grid_cells": 400,
+  "cells": [
+    {
+      "kind": "mpc",
+      "site": "site5",
+      "scenario": "normal",
+      "seed": 42,
+      "episodes": 1,
+      "decisions": 360,
+      "cell_seconds": 5.91,
+      "episode_mean_s": 5.905,
+      "decision_ms_median": 14.375,
+      "decision_ms_mean": 15.925,
+      "decision_ms_p95": 25.948,
+      "decision_ms_max": 101.448,
+      "cell_seconds_per_10ep": 59.11,
+      "projected_400_cells_hours": 6.57
+    },
+    {
+      "kind": "oracle",
+      "site": "site5",
+      "scenario": "normal",
+      "seed": 42,
+      "episodes": "sampled",
+      "decisions": 360,
+      "cell_seconds": 229.9,
+      "cell_seconds_per_10ep": 229.9,
+      "episode_mean_s": 23.0,
+      "decision_ms_median": 65.5,
+      "decision_ms_mean": 63.9,
+      "decision_ms_p95": 106.9,
+      "decision_ms_max": 762.9,
+      "projected_400_cells_hours": 25.5,
+      "caveat": "UPPER BOUND -- sampled from the slowest (longest-horizon) steps; the horizon recedes as the episode advances."
+    }
+  ],
+  "projected_total_hours_full_propagation": 32.07,
+  "decision_rule": "per-policy: <4h full grid; 4-12h full grid overnight; 12-40h reduce to 3 G4 sites; >40h retain analytic (s,S) and disclose",
+  "decision_per_policy": {
+    "MPC (H=24)": "re-run FULL grid, schedule overnight (6.57 h)",
+    "Oracle-MPC (H=360)": "reduce to the 3 G4 sites, ~7.6 h, disclose scope",
+    "ratio_oracle_over_mpc": 3.9
+  },
+  "note": "Single-cell extrapolation. Solve time varies with state; treat as an order-of-magnitude estimate."
+}

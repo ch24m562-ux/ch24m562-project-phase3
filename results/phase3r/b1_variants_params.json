@@ -1,0 +1,176 @@
+{
+  "B1_Original": {
+    "site1": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    },
+    "site2": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    },
+    "site3": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    },
+    "site4": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    },
+    "site5": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    },
+    "site6": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    },
+    "site7": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    },
+    "site8": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    },
+    "site9": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    },
+    "site10": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    }
+  },
+  "B1_Analytic": {
+    "site1": {
+      "s_norm": 0.33330666879982934,
+      "S_norm": 0.85
+    },
+    "site2": {
+      "s_norm": 0.33330666879982934,
+      "S_norm": 0.85
+    },
+    "site3": {
+      "s_norm": 0.3333066687998294,
+      "S_norm": 0.85
+    },
+    "site4": {
+      "s_norm": 0.3333066687998294,
+      "S_norm": 0.85
+    },
+    "site5": {
+      "s_norm": 0.33330666879982934,
+      "S_norm": 0.85
+    },
+    "site6": {
+      "s_norm": 0.3333066687998294,
+      "S_norm": 0.85
+    },
+    "site7": {
+      "s_norm": 0.33330666879982934,
+      "S_norm": 0.85
+    },
+    "site8": {
+      "s_norm": 0.33330666879982934,
+      "S_norm": 0.85
+    },
+    "site9": {
+      "s_norm": 0.33330666879982934,
+      "S_norm": 0.85
+    },
+    "site10": {
+      "s_norm": 0.3333066687998294,
+      "S_norm": 0.85
+    }
+  },
+  "B1_star_Deployable": {
+    "site1": {
+      "s_norm": 0.2,
+      "S_norm": 0.3
+    },
+    "site2": {
+      "s_norm": 0.45,
+      "S_norm": 0.95
+    },
+    "site3": {
+      "s_norm": 0.35,
+      "S_norm": 0.95
+    },
+    "site4": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    },
+    "site5": {
+      "s_norm": 0.35,
+      "S_norm": 0.95
+    },
+    "site6": {
+      "s_norm": 0.05,
+      "S_norm": 0.15
+    },
+    "site7": {
+      "s_norm": 0.4,
+      "S_norm": 0.95
+    },
+    "site8": {
+      "s_norm": 0.4,
+      "S_norm": 0.95
+    },
+    "site9": {
+      "s_norm": 0.25,
+      "S_norm": 0.35
+    },
+    "site10": {
+      "s_norm": 0.25,
+      "S_norm": 0.85
+    }
+  },
+  "_q_parameters_fixed": {
+    "q_small_pct": 0.3,
+    "q_large_pct": 0.6,
+    "verified_against": "live SSPolicy() defaults, not a hardcoded value",
+    "note": "NOT tuned in this study"
+  },
+  "B1_star_HighBuffer": {
+    "site1": {
+      "s_norm": 0.65,
+      "S_norm": 0.95
+    },
+    "site2": {
+      "s_norm": 0.65,
+      "S_norm": 0.95
+    },
+    "site3": {
+      "s_norm": 0.65,
+      "S_norm": 0.95
+    },
+    "site4": {
+      "s_norm": 0.65,
+      "S_norm": 0.95
+    },
+    "site5": {
+      "s_norm": 0.65,
+      "S_norm": 0.95
+    },
+    "site6": {
+      "s_norm": 0.75,
+      "S_norm": 0.95
+    },
+    "site7": {
+      "s_norm": 0.65,
+      "S_norm": 0.95
+    },
+    "site8": {
+      "s_norm": 0.65,
+      "S_norm": 0.95
+    },
+    "site9": {
+      "s_norm": 0.65,
+      "S_norm": 0.95
+    },
+    "site10": {
+      "s_norm": 0.65,
+      "S_norm": 0.95
+    }
+  }
+}

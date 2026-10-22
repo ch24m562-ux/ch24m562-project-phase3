@@ -1,0 +1,281 @@
+{
+  "status": "OK",
+  "date_utc": "2026-10-22T13:45:34.298074+00:00",
+  "protocol": {
+    "data": "df_test (days 46-60)",
+    "eval_mode": true,
+    "episode_len": 360,
+    "init_inv_frac": [
+      0.3,
+      0.9
+    ],
+    "seeds": [
+      42,
+      123,
+      777,
+      7,
+      13,
+      21,
+      99,
+      314,
+      500,
+      999
+    ],
+    "episodes_per_seed": 10,
+    "reset": "seed + ep, matching evaluate.py:272-273",
+    "scenarios": [
+      "normal",
+      "delayed",
+      "monsoon",
+      "extreme"
+    ],
+    "sites": [
+      "site1",
+      "site2",
+      "site3",
+      "site4",
+      "site5",
+      "site6",
+      "site7",
+      "site8",
+      "site9",
+      "site10"
+    ]
+  },
+  "variants": {
+    "B1_Original": {
+      "site1": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      },
+      "site2": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      },
+      "site3": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      },
+      "site4": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      },
+      "site5": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      },
+      "site6": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      },
+      "site7": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      },
+      "site8": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      },
+      "site9": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      },
+      "site10": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      }
+    },
+    "B1_Analytic": {
+      "site1": {
+        "s_norm": 0.33330666879982934,
+        "S_norm": 0.85
+      },
+      "site2": {
+        "s_norm": 0.33330666879982934,
+        "S_norm": 0.85
+      },
+      "site3": {
+        "s_norm": 0.3333066687998294,
+        "S_norm": 0.85
+      },
+      "site4": {
+        "s_norm": 0.3333066687998294,
+        "S_norm": 0.85
+      },
+      "site5": {
+        "s_norm": 0.33330666879982934,
+        "S_norm": 0.85
+      },
+      "site6": {
+        "s_norm": 0.3333066687998294,
+        "S_norm": 0.85
+      },
+      "site7": {
+        "s_norm": 0.33330666879982934,
+        "S_norm": 0.85
+      },
+      "site8": {
+        "s_norm": 0.33330666879982934,
+        "S_norm": 0.85
+      },
+      "site9": {
+        "s_norm": 0.33330666879982934,
+        "S_norm": 0.85
+      },
+      "site10": {
+        "s_norm": 0.3333066687998294,
+        "S_norm": 0.85
+      }
+    },
+    "B1_star_Deployable": {
+      "site1": {
+        "s_norm": 0.2,
+        "S_norm": 0.3
+      },
+      "site2": {
+        "s_norm": 0.45,
+        "S_norm": 0.95
+      },
+      "site3": {
+        "s_norm": 0.35,
+        "S_norm": 0.95
+      },
+      "site4": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      },
+      "site5": {
+        "s_norm": 0.35,
+        "S_norm": 0.95
+      },
+      "site6": {
+        "s_norm": 0.05,
+        "S_norm": 0.15
+      },
+      "site7": {
+        "s_norm": 0.4,
+        "S_norm": 0.95
+      },
+      "site8": {
+        "s_norm": 0.4,
+        "S_norm": 0.95
+      },
+      "site9": {
+        "s_norm": 0.25,
+        "S_norm": 0.35
+      },
+      "site10": {
+        "s_norm": 0.25,
+        "S_norm": 0.85
+      }
+    },
+    "B1_star_HighBuffer": {
+      "site1": {
+        "s_norm": 0.65,
+        "S_norm": 0.95
+      },
+      "site2": {
+        "s_norm": 0.65,
+        "S_norm": 0.95
+      },
+      "site3": {
+        "s_norm": 0.65,
+        "S_norm": 0.95
+      },
+      "site4": {
+        "s_norm": 0.65,
+        "S_norm": 0.95
+      },
+      "site5": {
+        "s_norm": 0.65,
+        "S_norm": 0.95
+      },
+      "site6": {
+        "s_norm": 0.75,
+        "S_norm": 0.95
+      },
+      "site7": {
+        "s_norm": 0.65,
+        "S_norm": 0.95
+      },
+      "site8": {
+        "s_norm": 0.65,
+        "S_norm": 0.95
+      },
+      "site9": {
+        "s_norm": 0.65,
+        "S_norm": 0.95
+      },
+      "site10": {
+        "s_norm": 0.65,
+        "S_norm": 0.95
+      }
+    }
+  },
+  "variant_standing": {
+    "B1_Original": "historical baseline (as executed in Phase 3)",
+    "B1_Analytic": "documentation-correction comparator (thesis \u00a74.5)",
+    "B1_star_Deployable": "primary frozen G3 calibrated baseline",
+    "B1_star_HighBuffer": "EXPLORATORY tie-break sensitivity (22 Oct amendment)"
+  },
+  "historical_validation": {
+    "rows_expected": 4000,
+    "rows_in_history_b1": 4000,
+    "duplicate_keys_new": 0,
+    "duplicate_keys_history": 0,
+    "rows_matched": 4000,
+    "rows_missing_from_history": 0,
+    "complete_coverage": true,
+    "keys_unique": true,
+    "EENS_kWh": {
+      "max_abs_diff": 5.684341886080802e-14,
+      "n_mismatched": 0,
+      "match": true
+    },
+    "diesel_kWh": {
+      "max_abs_diff": 5.684341886080802e-14,
+      "n_mismatched": 0,
+      "match": true
+    },
+    "orders_placed": {
+      "max_abs_diff": 0.0,
+      "n_mismatched": 0,
+      "match": true
+    },
+    "init_inv_frac": {
+      "max_abs_diff": 5.551115123125783e-17,
+      "n_mismatched": 0,
+      "match": true
+    },
+    "PASS": true
+  },
+  "mean_EENS_by_variant_scenario": {
+    "normal": {
+      "B1_Analytic": 1.68618253,
+      "B1_Original": 3.54761802,
+      "B1_star_Deployable": 0.67437255,
+      "B1_star_HighBuffer": 0.0627765
+    },
+    "delayed": {
+      "B1_Analytic": 12.48249836,
+      "B1_Original": 13.43199914,
+      "B1_star_Deployable": 7.11701607,
+      "B1_star_HighBuffer": 3.39516879
+    },
+    "monsoon": {
+      "B1_Analytic": 23.16719004,
+      "B1_Original": 23.20429426,
+      "B1_star_Deployable": 16.45448452,
+      "B1_star_HighBuffer": 11.2821985
+    },
+    "extreme": {
+      "B1_Analytic": 61.96763113,
+      "B1_Original": 57.73154856,
+      "B1_star_Deployable": 55.6579995,
+      "B1_star_HighBuffer": 53.16433457
+    }
+  },
+  "episodes": 16000,
+  "seconds": 2373.4,
+  "historical_files_modified": false
+}

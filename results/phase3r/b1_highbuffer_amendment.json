@@ -1,0 +1,247 @@
+{
+  "status": "OK",
+  "amendment": "G3 exploratory amendment \u2014 buffer-priority tie-break",
+  "amendment_date": "2026-10-22",
+  "standing": "post-calibration EXPLORATORY sensitivity analysis. NOT a preregistered baseline.",
+  "test_exposure_disclosure": "HighBuffer's selection rule was specified from training-window findings BEFORE any held-out evaluation. The full evaluation protocol and the decision to report all four variants regardless of outcome were fixed BEFORE the full-grid run. However, a limited held-out pilot (site5, normal+delayed, seeds 42/123) was executed and inspected before the full grid. No parameter was selected using it, but the full-grid results must NOT be described as a completely untouched test set for HighBuffer.",
+  "rule": "among candidates at minimum training EENS (tol 1e-12): highest s; then lower diesel; then fewer orders; then enumeration order",
+  "hypothesis": "earlier replenishment MAY improve reliability under longer delivery lead times, at the cost of more frequent ordering. Higher s does NOT guarantee higher realised inventory: deliveries are stochastic and order quantities are fixed.",
+  "scope_limit": "HighBuffer is the maximum-s candidate within the ALREADY EVALUATED grid. The refinement pass was centred on the B1*-Deployable winner, so this is not a separately optimised global maximum-buffer solution.",
+  "reporting_rule": "B1*-Deployable and B1*-HighBuffer are both reported for every site and scenario, regardless of which performs better. HighBuffer is NOT propagated to MPC or Oracle-MPC without a further recorded scope amendment.",
+  "episodes_rerun": 0,
+  "frozen_calibration_untouched": true,
+  "source_calibration": {
+    "path": "results\\phase3r\\b1_star_calibration.json",
+    "sha256": "2f53d876ee51e1078f5b08df18698591c5d672fa358d1dbcf1b1d13492145025"
+  },
+  "sites": [
+    {
+      "site": "site1",
+      "B1_star_Deployable": {
+        "s_norm": 0.2,
+        "S_norm": 0.3,
+        "orders_mean": 0.3
+      },
+      "B1_star_HighBuffer": {
+        "s_norm": 0.65,
+        "S_norm": 0.95,
+        "orders_mean": 0.9
+      },
+      "candidates_tied_at_min_EENS": 30,
+      "candidates_at_max_s": 3,
+      "same_candidate": false,
+      "calibration_episode_identity": {
+        "eens_identical": true,
+        "diesel_identical": true,
+        "orders_identical": false
+      }
+    },
+    {
+      "site": "site2",
+      "B1_star_Deployable": {
+        "s_norm": 0.45,
+        "S_norm": 0.95,
+        "orders_mean": 3.8
+      },
+      "B1_star_HighBuffer": {
+        "s_norm": 0.65,
+        "S_norm": 0.95,
+        "orders_mean": 4.4
+      },
+      "candidates_tied_at_min_EENS": 15,
+      "candidates_at_max_s": 3,
+      "same_candidate": false,
+      "calibration_episode_identity": {
+        "eens_identical": true,
+        "diesel_identical": true,
+        "orders_identical": false
+      }
+    },
+    {
+      "site": "site3",
+      "B1_star_Deployable": {
+        "s_norm": 0.35,
+        "S_norm": 0.95,
+        "orders_mean": 0.7
+      },
+      "B1_star_HighBuffer": {
+        "s_norm": 0.65,
+        "S_norm": 0.95,
+        "orders_mean": 1.8
+      },
+      "candidates_tied_at_min_EENS": 23,
+      "candidates_at_max_s": 3,
+      "same_candidate": false,
+      "calibration_episode_identity": {
+        "eens_identical": true,
+        "diesel_identical": true,
+        "orders_identical": false
+      }
+    },
+    {
+      "site": "site4",
+      "B1_star_Deployable": {
+        "s_norm": 0.25,
+        "S_norm": 0.85,
+        "orders_mean": 0.6
+      },
+      "B1_star_HighBuffer": {
+        "s_norm": 0.65,
+        "S_norm": 0.95,
+        "orders_mean": 1.7
+      },
+      "candidates_tied_at_min_EENS": 30,
+      "candidates_at_max_s": 3,
+      "same_candidate": false,
+      "calibration_episode_identity": {
+        "eens_identical": true,
+        "diesel_identical": true,
+        "orders_identical": false
+      }
+    },
+    {
+      "site": "site5",
+      "B1_star_Deployable": {
+        "s_norm": 0.35,
+        "S_norm": 0.95,
+        "orders_mean": 2.2
+      },
+      "B1_star_HighBuffer": {
+        "s_norm": 0.65,
+        "S_norm": 0.95,
+        "orders_mean": 4.5
+      },
+      "candidates_tied_at_min_EENS": 8,
+      "candidates_at_max_s": 3,
+      "same_candidate": false,
+      "calibration_episode_identity": {
+        "eens_identical": true,
+        "diesel_identical": true,
+        "orders_identical": false
+      }
+    },
+    {
+      "site": "site6",
+      "B1_star_Deployable": {
+        "s_norm": 0.05,
+        "S_norm": 0.15,
+        "orders_mean": 0.0
+      },
+      "B1_star_HighBuffer": {
+        "s_norm": 0.75,
+        "S_norm": 0.95,
+        "orders_mean": 0.9
+      },
+      "candidates_tied_at_min_EENS": 46,
+      "candidates_at_max_s": 2,
+      "same_candidate": false,
+      "calibration_episode_identity": {
+        "eens_identical": true,
+        "diesel_identical": true,
+        "orders_identical": false
+      }
+    },
+    {
+      "site": "site7",
+      "B1_star_Deployable": {
+        "s_norm": 0.4,
+        "S_norm": 0.95,
+        "orders_mean": 2.7
+      },
+      "B1_star_HighBuffer": {
+        "s_norm": 0.65,
+        "S_norm": 0.95,
+        "orders_mean": 3.7
+      },
+      "candidates_tied_at_min_EENS": 17,
+      "candidates_at_max_s": 3,
+      "same_candidate": false,
+      "calibration_episode_identity": {
+        "eens_identical": true,
+        "diesel_identical": true,
+        "orders_identical": false
+      }
+    },
+    {
+      "site": "site8",
+      "B1_star_Deployable": {
+        "s_norm": 0.4,
+        "S_norm": 0.95,
+        "orders_mean": 0.7
+      },
+      "B1_star_HighBuffer": {
+        "s_norm": 0.65,
+        "S_norm": 0.95,
+        "orders_mean": 1.2
+      },
+      "candidates_tied_at_min_EENS": 17,
+      "candidates_at_max_s": 3,
+      "same_candidate": false,
+      "calibration_episode_identity": {
+        "eens_identical": true,
+        "diesel_identical": true,
+        "orders_identical": false
+      }
+    },
+    {
+      "site": "site9",
+      "B1_star_Deployable": {
+        "s_norm": 0.25,
+        "S_norm": 0.35,
+        "orders_mean": 0.7
+      },
+      "B1_star_HighBuffer": {
+        "s_norm": 0.65,
+        "S_norm": 0.95,
+        "orders_mean": 1.6
+      },
+      "candidates_tied_at_min_EENS": 27,
+      "candidates_at_max_s": 3,
+      "same_candidate": false,
+      "calibration_episode_identity": {
+        "eens_identical": true,
+        "diesel_identical": true,
+        "orders_identical": false
+      }
+    },
+    {
+      "site": "site10",
+      "B1_star_Deployable": {
+        "s_norm": 0.25,
+        "S_norm": 0.85,
+        "orders_mean": 0.5
+      },
+      "B1_star_HighBuffer": {
+        "s_norm": 0.65,
+        "S_norm": 0.95,
+        "orders_mean": 1.5
+      },
+      "candidates_tied_at_min_EENS": 33,
+      "candidates_at_max_s": 3,
+      "same_candidate": false,
+      "calibration_episode_identity": {
+        "eens_identical": true,
+        "diesel_identical": true,
+        "orders_identical": false
+      }
+    }
+  ],
+  "ECG1_supplemental_dataset_hashes": {
+    "status": "SUPPLEMENTS ECG-1 -- DOES NOT CLOSE IT",
+    "note": "The frozen calibration record omitted these hashes; they are recorded here rather than re-running 5,030 episodes. These are single-platform raw-byte digests. Because CRLF/LF conversion changes the digest without changing the data (protocol \u00a71.9), hashes ALONE cannot establish cross-platform dataset identity. ECG-1 closure still requires row-wise numerical comparison after newline normalisation.",
+    "platform": "Windows 11 / python 3.12.12",
+    "files": {
+      "data/processed/site1.csv": "27a6ac7681a4a20e9f8950d1adc808313485a6adc5c75cf02395e8e2548647d8",
+      "data/processed/site2.csv": "f4dd09111c3bc12428ea06a151340428d8fc316e2674fea83ed8543ec3d135a2",
+      "data/processed/site3.csv": "91106a24544950cefb02adc848bca22b599899236326bc064075b88e506c72c0",
+      "data/processed/site4.csv": "58e0b0367e8c02f32542be095186f1fc4a688fa85ed3257fa1dbf8aab7e87893",
+      "data/processed/site5.csv": "27219806cc87d13a9261c3e5fd18601bb62048a82c2bd48ceb08d0ce93341c4a",
+      "data/processed/site6.csv": "dcaf98633304a26f46796c06254be9e934847250be6e17a4907cf4209b4d86d0",
+      "data/processed/site7.csv": "b825a2992189739ed2735f224eb0a7efca656b3106a39adfbe9c217082621ef0",
+      "data/processed/site8.csv": "9765565aa2b452a3b7325f19edb17eb6c2eb698221921f97e4eeec22f4c3fa9a",
+      "data/processed/site9.csv": "f0c3141dd218c8f0e770b00f19d52302f870df61eff15eb88bba3afd875d5b20",
+      "data/processed/site10.csv": "11c655e37b8e79343cdc3dbae5a0d06e2b6366d8cd3ed6667914d6e6807a5ed8"
+    }
+  },
+  "generated_utc": "2026-10-22T13:05:30.217941+00:00"
+}
