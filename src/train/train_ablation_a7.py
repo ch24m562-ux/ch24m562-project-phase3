@@ -28,6 +28,7 @@ Evaluate after training:
 """
 from __future__ import annotations
 
+from datetime import datetime
 import os
 import sys
 import argparse
@@ -178,20 +179,23 @@ def main():
         render=False,
     )
 
-    model.learn(total_timesteps=args.timesteps, callback=eval_cb)
-
-    # ── Save ─────────────────────────────────────────────────────────────────
-    model_path = os.path.join(args.logdir, f"{site}_s{args.seed}_final.zip")
-    vn_path    = os.path.join(args.logdir, f"{site}_s{args.seed}_vecnorm.pkl")
-
-    model.save(model_path)
-    vec_env.save(vn_path)
-    vec_env.close()
-    eval_env.close()
-
-    # ── MLflow logging ────────────────────────────────────────────────────────
-    best_reward = eval_cb.best_mean_reward
     with mlflow.start_run(run_name=f"{site}_A7_s{args.seed}"):
+        _t_start = datetime.now()
+        model.learn(total_timesteps=args.timesteps, callback=eval_cb)
+        wall_time_min = (datetime.now() - _t_start).total_seconds() / 60.0
+        print(f"[A7] training wall-clock: {wall_time_min:.1f} min")
+
+        # ── Save ─────────────────────────────────────────────────────────────────
+        model_path = os.path.join(args.logdir, f"{site}_s{args.seed}_final.zip")
+        vn_path    = os.path.join(args.logdir, f"{site}_s{args.seed}_vecnorm.pkl")
+
+        model.save(model_path)
+        vec_env.save(vn_path)
+        vec_env.close()
+        eval_env.close()
+
+        # ── MLflow logging ────────────────────────────────────────────────────────
+        best_reward = eval_cb.best_mean_reward
         mlflow.log_params({
             "site":            site,
             "seed":            args.seed,
@@ -204,6 +208,7 @@ def main():
         })
         mlflow.log_metrics({
             "best_eval_reward": float(best_reward) if np.isfinite(best_reward) else -9999.0,
+            "wall_time_min":    round(wall_time_min, 1),
         })
         try:
             mlflow.log_artifact(model_path)

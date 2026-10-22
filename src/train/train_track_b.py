@@ -229,25 +229,28 @@ def main():
             render=False,
         )
 
-        model.learn(total_timesteps=args.timesteps, callback=eval_cb)
-
-        model_path = os.path.join(args.logdir, f"{site}_s{args.seed}_final.zip")
-        model.save(model_path)
-
-        vn_path = os.path.join(args.logdir, f"{site}_s{args.seed}_vecnorm.pkl")
-        vec_env.save(vn_path)
-
-        vec_env.close()
-        eval_env.close()
-
-        best_reward = eval_cb.best_mean_reward
-        print(f"[Track B] Saved: {model_path}")
-        print(f"[Track B] Saved VecNormalize: {vn_path}")
-
-        # MLflow logging
         mlflow.set_tracking_uri("sqlite:///mlflow.db")
         mlflow.set_experiment(args.tag)
         with mlflow.start_run(run_name=f"{site}_trackb_s{args.seed}"):
+            _t_start = datetime.now()
+            model.learn(total_timesteps=args.timesteps, callback=eval_cb)
+            wall_time_min = (datetime.now() - _t_start).total_seconds() / 60.0
+            print(f"[TrackB] training wall-clock: {wall_time_min:.1f} min")
+
+            model_path = os.path.join(args.logdir, f"{site}_s{args.seed}_final.zip")
+            model.save(model_path)
+
+            vn_path = os.path.join(args.logdir, f"{site}_s{args.seed}_vecnorm.pkl")
+            vec_env.save(vn_path)
+
+            vec_env.close()
+            eval_env.close()
+
+            best_reward = eval_cb.best_mean_reward
+            print(f"[Track B] Saved: {model_path}")
+            print(f"[Track B] Saved VecNormalize: {vn_path}")
+
+            # MLflow logging
             mlflow.log_params({
                 "site": site, "seed": args.seed, "policy": "TrackB",
                 "lead_scenario": args.lead, "gamma": ppo_cfg["gamma"],
@@ -256,6 +259,7 @@ def main():
             })
             mlflow.log_metrics({
                 "best_eval_reward": float(best_reward) if np.isfinite(best_reward) else -9999.0,
+            "wall_time_min":    round(wall_time_min, 1),
             })
             mlflow.log_artifact(model_path)
             mlflow.log_artifact(vn_path)

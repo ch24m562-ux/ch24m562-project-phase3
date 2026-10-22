@@ -214,36 +214,39 @@ def main():
         render=False,
     )
 
-    model.learn(total_timesteps=args.timesteps, callback=eval_cb)
-
-    # ── Save ──────────────────────────────────────────────────────────────────
-    model_path = os.path.join(args.logdir, f"{site}_s{args.seed}_final.zip")
-    vn_path    = os.path.join(args.logdir, f"{site}_s{args.seed}_vecnorm.pkl")
-
-    model.save(model_path)
-    vec_env.save(vn_path)
-
-    vec_env.close()
-    eval_env.close()
-
-    print(f"\n[A5] Saved model:      {model_path}")
-    print(f"[A5] Saved VecNorm:    {vn_path}")
-    print(f"\nNext — evaluate with:")
-    print(f"  python -m src.eval.evaluate \\")
-    print(f"    --site {site} --lead {args.lead} \\")
-    print(f"    --policy_type rl --algo maskable --env_type a5 \\")
-    print(f"    --model_path {model_path.replace('.zip','')} \\")
-    print(f"    --vecnorm_path {vn_path} \\")
-    print(f"    --episodes 30 --seed {args.seed} \\")
-    print(f"    --policy_label A5 --train_scenario {args.lead} \\")
-    print(f"    --experiment_tag ablation_a5 --train_steps {args.timesteps} \\")
-    print(f"    --init_diesel_low 0.3 --init_diesel_high 0.9 \\")
-    print(f"    --out_csv results/ablation_a5/{site}/seed{args.seed}/eval_{args.lead}.csv")
-
-
-    # ── MLflow logging ────────────────────────────────────────────────────
-    best_reward = eval_cb.best_mean_reward
     with mlflow.start_run(run_name=f"{site}_A5_s{args.seed}"):
+        _t_start = datetime.now()
+        model.learn(total_timesteps=args.timesteps, callback=eval_cb)
+        wall_time_min = (datetime.now() - _t_start).total_seconds() / 60.0
+        print(f"[A5] training wall-clock: {wall_time_min:.1f} min")
+
+        # ── Save ──────────────────────────────────────────────────────────────────
+        model_path = os.path.join(args.logdir, f"{site}_s{args.seed}_final.zip")
+        vn_path    = os.path.join(args.logdir, f"{site}_s{args.seed}_vecnorm.pkl")
+
+        model.save(model_path)
+        vec_env.save(vn_path)
+
+        vec_env.close()
+        eval_env.close()
+
+        print(f"\n[A5] Saved model:      {model_path}")
+        print(f"[A5] Saved VecNorm:    {vn_path}")
+        print(f"\nNext — evaluate with:")
+        print(f"  python -m src.eval.evaluate \\")
+        print(f"    --site {site} --lead {args.lead} \\")
+        print(f"    --policy_type rl --algo maskable --env_type a5 \\")
+        print(f"    --model_path {model_path.replace('.zip','')} \\")
+        print(f"    --vecnorm_path {vn_path} \\")
+        print(f"    --episodes 30 --seed {args.seed} \\")
+        print(f"    --policy_label A5 --train_scenario {args.lead} \\")
+        print(f"    --experiment_tag ablation_a5 --train_steps {args.timesteps} \\")
+        print(f"    --init_diesel_low 0.3 --init_diesel_high 0.9 \\")
+        print(f"    --out_csv results/ablation_a5/{site}/seed{args.seed}/eval_{args.lead}.csv")
+
+
+        # ── MLflow logging ────────────────────────────────────────────────────
+        best_reward = eval_cb.best_mean_reward
         mlflow.log_params({
             "site": site, "seed": args.seed, "policy": "A5",
             "lead_scenario": args.lead, "gamma": ppo_cfg["gamma"],
@@ -252,6 +255,7 @@ def main():
         })
         mlflow.log_metrics({
             "best_eval_reward": float(best_reward) if np.isfinite(best_reward) else -9999.0,
+            "wall_time_min":    round(wall_time_min, 1),
         })
         mlflow.log_artifact(model_path)
         mlflow.log_artifact(vn_path)
